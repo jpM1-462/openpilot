@@ -10,10 +10,10 @@ from opendbc.can.packer import CANPacker
 VisualAlert = car.CarControl.HUDControl.VisualAlert
 
 # Accel limits
-ACCEL_HYST_GAP = 0.02  # don't change accel command for small oscilalitons within this value
-ACCEL_MAX = 1.5  # 1.5 m/s2
-ACCEL_MIN = -3.0  # 3   m/s2
-ACCEL_SCALE = max(ACCEL_MAX, -ACCEL_MIN)
+ACCEL_HYST_GAP = 0.02
+ACCEL_MAX = 1.5
+ACCEL_MIN = -3.5
+ACCEL_SCALE = 3
 
 def accel_hysteresis(accel, accel_steady, enabled):
 
@@ -59,14 +59,20 @@ class CarController():
     apply_gas = clip(actuators.gas, 0., 1.)
 
     if CS.CP.enableGasInterceptor:
-      # send only negative accel if interceptor is detected. otherwise, send the regular value
-      # +0.06 offset to reduce ABS pump usage when OP is engaged
       apply_accel = 0.06 - actuators.brake
     else:
       apply_accel = actuators.gas - actuators.brake
 
+    # dynamic acceleration
+    dynamic_accel_max = ACCEL_MAX
+    if CS.out.vEgo > 5.5:
+      if CS.out.vEgo >= 20:
+        dynamic_accel_max = 0.5
+      else:
+        dynamic_accel_max = ACCEL_MAX - (((CS.out.vEgo - 5.5)/ 14.5))
+
     apply_accel, self.accel_steady = accel_hysteresis(apply_accel, self.accel_steady, enabled)
-    apply_accel = clip(apply_accel * ACCEL_SCALE, ACCEL_MIN, ACCEL_MAX)
+    apply_accel = clip(apply_accel * ACCEL_SCALE, ACCEL_MIN, dynamic_accel_max)
 
     # steer torque
     new_steer = int(round(actuators.steer * SteerLimitParams.STEER_MAX))

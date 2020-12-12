@@ -12,7 +12,7 @@ EventName = car.CarEvent.EventName
 class CarInterface(CarInterfaceBase):
   @staticmethod
   def compute_gb(accel, speed):
-    return float(accel) / 3.0
+    return float(accel / 3.0 * (0.5 + speed / 60.0))
 
   @staticmethod
   def get_params(candidate, fingerprint=gen_empty_fingerprint(), car_fw=[]):  # pylint: disable=dangerous-default-value
@@ -299,19 +299,15 @@ class CarInterface(CarInterfaceBase):
 
     ret.longitudinalTuning.deadzoneBP = [0., 9.]
     ret.longitudinalTuning.deadzoneV = [0., .15]
-    ret.longitudinalTuning.kpBP = [0., 5., 35.]
-    ret.longitudinalTuning.kiBP = [0., 35.]
 
-    if ret.enableGasInterceptor:
-      ret.gasMaxBP = [0., 9., 35]
-      ret.gasMaxV = [0.2, 0.5, 0.7]
-      ret.longitudinalTuning.kpV = [1.2, 0.8, 0.5]
-      ret.longitudinalTuning.kiV = [0.18, 0.12]
-    else:
-      ret.gasMaxBP = [0.]
-      ret.gasMaxV = [0.5]
-      ret.longitudinalTuning.kpV = [3.6, 2.4, 1.5]
-      ret.longitudinalTuning.kiV = [0.54, 0.36]
+    ret.gasMaxBP = [0., 1.5, 15.]
+    ret.gasMaxV = [0.2, 0.36, 0.7]
+
+    ret.longitudinalTuning.kpBP = [0., 10., 35.]
+    ret.longitudinalTuning.kpV = [3.6, 2.4, 1.5]
+
+    ret.longitudinalTuning.kiBP = [0., 9., 16., 35.]
+    ret.longitudinalTuning.kiV = [0.38, 0.30, 0.15, 0.12]
 
     return ret
 
@@ -339,6 +335,9 @@ class CarInterface(CarInterfaceBase):
       if ret.vEgo < 0.001:
         # while in standstill, send a user alert
         events.add(EventName.manualRestart)
+
+    if ret.vEgo < 0.001 and self.CS.pcm_acc_status == 7:
+      events.add(EventName.standstillTimer)
 
     ret.events = events.to_msg()
 
