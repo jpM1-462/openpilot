@@ -6,9 +6,9 @@ Ecu = car.CarParams.Ecu
 
 class CarControllerParams:
   ACCEL_HYST_GAP = 0.02  # don't change accel command for small oscilalitons within this value
-  ACCEL_MAX = 1.5  # 1.5 m/s2
-  ACCEL_MIN = -3.0  # 3   m/s2
-  ACCEL_SCALE = max(ACCEL_MAX, -ACCEL_MIN)
+  ACCEL_MAX = 1.35  # 1.35 m/s2
+  ACCEL_MIN = -4.0  # 4.0  m/s2
+  ACCEL_SCALE = 3.0 # 3.0
 
   STEER_MAX = 1500
   STEER_DELTA_UP = 10       # 1.5s time to peak torque
