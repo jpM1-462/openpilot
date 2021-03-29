@@ -13,6 +13,8 @@ class CarState(CarStateBase):
     can_define = CANDefine(DBC[CP.carFingerprint]['pt'])
     self.shifter_values = can_define.dv["GEAR_PACKET"]['GEAR']
 
+    self.engineRPM = 0
+    
     # On cars with cp.vl["STEER_TORQUE_SENSOR"]['STEER_ANGLE']
     # the signal is zeroed to where the steering angle is at start.
     # Need to apply an offset as soon as the steering angle measurements are both received
@@ -65,6 +67,7 @@ class CarState(CarStateBase):
     ret.gearShifter = self.parse_gear_shifter(self.shifter_values.get(can_gear, None))
     ret.leftBlinker = cp.vl["STEERING_LEVERS"]['TURN_SIGNALS'] == 1
     ret.rightBlinker = cp.vl["STEERING_LEVERS"]['TURN_SIGNALS'] == 2
+    self.engineRPM = cp.vl["ENGINE_RPM"]['RPM']
 
     ret.steeringTorque = cp.vl["STEER_TORQUE_SENSOR"]['STEER_TORQUE_DRIVER']
     ret.steeringTorqueEps = cp.vl["STEER_TORQUE_SENSOR"]['STEER_TORQUE_EPS']
@@ -119,6 +122,7 @@ class CarState(CarStateBase):
       ("WHEEL_SPEED_FR", "WHEEL_SPEEDS", 0),
       ("WHEEL_SPEED_RL", "WHEEL_SPEEDS", 0),
       ("WHEEL_SPEED_RR", "WHEEL_SPEEDS", 0),
+      ("RPM", "ENGINE_RPM", 0),
       ("DOOR_OPEN_FL", "SEATS_DOORS", 1),
       ("DOOR_OPEN_FR", "SEATS_DOORS", 1),
       ("DOOR_OPEN_RL", "SEATS_DOORS", 1),

@@ -208,8 +208,29 @@ static void ui_draw_vision_speed(UIState *s) {
   const float speed = std::max(0.0, s->scene.car_state.getVEgo() * (s->scene.is_metric ? 3.6 : 2.2369363));
   const std::string speed_str = std::to_string((int)std::nearbyint(speed));
   nvgTextAlign(s->vg, NVG_ALIGN_CENTER | NVG_ALIGN_BASELINE);
-  ui_draw_text(s, s->viz_rect.centerX(), 240, speed_str.c_str(), 96 * 2.5, COLOR_WHITE, "sans-bold");
-  ui_draw_text(s, s->viz_rect.centerX(), 320, s->scene.is_metric ? "km/h" : "mph", 36 * 2.5, COLOR_WHITE_ALPHA(200), "sans-regular");
+  ui_draw_text(s, s->viz_rect.centerX(), 160, speed_str.c_str(), 80 * 2.5, COLOR_WHITE, "sans-bold");
+  ui_draw_text(s, s->viz_rect.centerX(), 220, s->scene.is_metric ? "km/h" : "mph", 24 * 2.5, COLOR_WHITE_ALPHA(200), "sans-regular");
+}
+
+static void ui_draw_engine_rpm(UIState *s) {
+  const float engine_rpm = s->scene.engineRPM;
+  const std::string engine_rpm_str = std::to_string((int)std::nearbyint(engine_rpm));
+  nvgTextAlign(s->vg, NVG_ALIGN_CENTER | NVG_ALIGN_BASELINE);
+  if(engine_rpm == 0) {
+  	ui_draw_text(s, s->viz_rect.centerX(), 320 , "EV Mode", 36 * 2.5, COLOR_WHITE, "sans-bold");
+  } else {
+    ui_draw_text(s, s->viz_rect.centerX(), 300, engine_rpm_str.c_str(), 36 * 2.5, COLOR_WHITE, "sans-bold");
+    ui_draw_text(s, s->viz_rect.centerX(), 360, "RPM", 24 * 2.5, COLOR_WHITE_ALPHA(200), "sans-regular");
+  }
+}
+
+static void ui_draw_acceleration_command(UIState *s) {
+  char val_str [16];
+  snprintf(val_str, 16, "%.2f", (s->scene.aEgo));
+  const std::string accel_cmd_str = std::string(val_str);
+  nvgTextAlign(s->vg, NVG_ALIGN_CENTER | NVG_ALIGN_BASELINE);
+  ui_draw_text(s, s->viz_rect.centerX(), 440, accel_cmd_str.c_str(), 36 * 2.5, COLOR_WHITE, "sans-bold");
+  ui_draw_text(s, s->viz_rect.centerX(), 500, "m/s²", 24 * 2.5, COLOR_WHITE_ALPHA(200), "sans-regular");
 }
 
 static void ui_draw_vision_event(UIState *s) {
@@ -223,10 +244,17 @@ static void ui_draw_vision_event(UIState *s) {
 }
 
 static void ui_draw_vision_face(UIState *s) {
-  const int face_size = 96;
+  const int face_size = 80;
   const int face_x = (s->viz_rect.x + face_size + (bdr_s * 2));
   const int face_y = (s->viz_rect.bottom() - footer_h + ((footer_h - face_size) / 2));
   ui_draw_circle_image(s, face_x, face_y, face_size, "driver_face", s->scene.dmonitoring_state.getIsActiveMode());
+}
+
+static void ui_draw_vision_brake(UIState *s) {
+  const int brake_size = 80;
+  const int brake_x = (s->viz_rect.x + brake_size + (bdr_s * 2) + 255); //That 55 is kinda random -wirelessnet2
+  const int brake_y = (s->viz_rect.bottom() - footer_h + ((footer_h - brake_size) / 2));
+  ui_draw_circle_image(s, brake_x, brake_y, brake_size, "brake_disc", s->scene.brakeLights);
 }
 
 static void ui_draw_driver_view(UIState *s) {
@@ -270,23 +298,27 @@ static void ui_draw_driver_view(UIState *s) {
   const int icon_x = is_rhd ? rect.right() - face_size - bdr_s * 2 : rect.x + face_size + bdr_s * 2;
   const int icon_y = rect.bottom() - face_size - bdr_s * 2.5;
   ui_draw_circle_image(s, icon_x, icon_y, face_size, "driver_face", face_detected);
+  ui_draw_circle_image(s, icon_x + 200, icon_y, face_size-5, "brake_disc", s->scene.brakeLights);
 }
 
 static void ui_draw_vision_header(UIState *s) {
   NVGpaint gradient = nvgLinearGradient(s->vg, s->viz_rect.x,
-                        s->viz_rect.y+(header_h-(header_h/2.5)),
+                        s->viz_rect.y+(header_h-(header_h/2.0)),
                         s->viz_rect.x, s->viz_rect.y+header_h,
-                        nvgRGBAf(0,0,0,0.45), nvgRGBAf(0,0,0,0));
+                        nvgRGBAf(0,0,0,0.6), nvgRGBAf(0,0,0,0));
 
   ui_fill_rect(s->vg, {s->viz_rect.x, s->viz_rect.y, s->viz_rect.w, header_h}, gradient);
 
   ui_draw_vision_maxspeed(s);
   ui_draw_vision_speed(s);
   ui_draw_vision_event(s);
+  ui_draw_engine_rpm(s);
+  ui_draw_acceleration_command(s);
 }
 
 static void ui_draw_vision_footer(UIState *s) {
   ui_draw_vision_face(s);
+  ui_draw_vision_brake(s);
 }
 
 static float get_alert_alpha(float blink_rate) {
@@ -523,6 +555,7 @@ void ui_nvg_init(UIState *s) {
       {"button_home", "../assets/images/button_home.png"},
       {"battery", "../assets/images/battery.png"},
       {"battery_charging", "../assets/images/battery_charging.png"},
+      {"brake_disc", "../assets/img_brake_disc.png"},
       {"network_0", "../assets/images/network_0.png"},
       {"network_1", "../assets/images/network_1.png"},
       {"network_2", "../assets/images/network_2.png"},

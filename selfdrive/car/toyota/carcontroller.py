@@ -52,7 +52,7 @@ class CarController():
 
     apply_gas = clip(actuators.gas, 0., 1.)
 
-    if CS.CP.enableGasInterceptor:
+    if CS.CP.enableGasInterceptor and CS.out.vEgo < 3:
       # send only negative accel if interceptor is detected. otherwise, send the regular value
       # +0.06 offset to reduce ABS pump usage when OP is engaged
       apply_accel = 0.06 - actuators.brake
@@ -117,7 +117,7 @@ class CarController():
       else:
         can_sends.append(create_accel_command(self.packer, 0, pcm_cancel_cmd, False, lead))
 
-    if (frame % 2 == 0) and (CS.CP.enableGasInterceptor):
+    if frame % 2 == 0 and CS.CP.enableGasInterceptor and CS.out.vEgo < 3:
       # send exactly zero if apply_gas is zero. Interceptor will send the max between read value and apply_gas.
       # This prevents unexpected pedal range rescaling
       can_sends.append(create_gas_command(self.packer, apply_gas, frame//2))
@@ -133,9 +133,6 @@ class CarController():
        (not (fcw_alert or steer_alert) and self.alert_active):
       send_ui = True
       self.alert_active = not self.alert_active
-    elif pcm_cancel_cmd:
-      # forcing the pcm to disengage causes a bad fault sound so play a good sound instead
-      send_ui = True
 
     if (frame % 100 == 0 or send_ui) and Ecu.fwdCamera in self.fake_ecus:
       can_sends.append(create_ui_command(self.packer, steer_alert, pcm_cancel_cmd, left_line, right_line, left_lane_depart, right_lane_depart))

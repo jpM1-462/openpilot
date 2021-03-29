@@ -9,10 +9,27 @@ from selfdrive.car.interfaces import CarInterfaceBase
 EventName = car.CarEvent.EventName
 
 
+def compute_gb_gas_interceptor(accel, speed):
+  if speed < 3:
+    return float(accel / 3.0 * (0.5 + speed / 60.0))
+  return float(accel) / 3.0
+
+def compute_gb_toyota(accel, speed):
+  return float(accel) / 3.0
+
 class CarInterface(CarInterfaceBase):
+  def __init__(self, CP, CarController, CarState):
+    super().__init__(CP, CarController, CarState)
+    if self.CP.enableGasInterceptor:
+      self.compute_gb = compute_gb_gas_interceptor
+    else:
+      self.compute_gb = compute_gb_toyota
+
+    self.init_cruise_speed = 0.
+
   @staticmethod
   def compute_gb(accel, speed):
-    return float(accel) / CarControllerParams.ACCEL_SCALE
+    raise NotImplementedError
 
   @staticmethod
   def get_params(candidate, fingerprint=gen_empty_fingerprint(), car_fw=[]):  # pylint: disable=dangerous-default-value
@@ -65,7 +82,7 @@ class CarInterface(CarInterfaceBase):
       ret.lateralTuning.indi.timeConstantV = [1.0]
       ret.lateralTuning.indi.actuatorEffectivenessBP = [0.]
       ret.lateralTuning.indi.actuatorEffectivenessV = [1.0]
-      ret.steerActuatorDelay = 0.3
+      ret.steerActuatorDelay = 0.35
 
     elif candidate in [CAR.RAV4, CAR.RAV4H]:
       stop_and_go = True if (candidate in CAR.RAV4H) else False
@@ -331,11 +348,9 @@ class CarInterface(CarInterfaceBase):
     # intercepting the DSU is a community feature since it requires unofficial hardware
     ret.communityFeature = ret.enableGasInterceptor or ret.enableDsu or smartDsu
 
-    if ret.enableGasInterceptor:
-      ret.gasMaxBP = [0., 9., 35]
-      ret.gasMaxV = [0.2, 0.5, 0.7]
-      ret.longitudinalTuning.kpV = [1.2, 0.8, 0.5]
-      ret.longitudinalTuning.kiV = [0.18, 0.12]
+    if ret.enableGasInterceptor: # ramp down acceleration once desired speed is reached
+      ret.gasMaxBP = [0., 1., 3., 16.]
+      ret.gasMaxV = [0.28, 0.32, 0.45, 0.39]
 
     return ret
 
@@ -345,10 +360,25 @@ class CarInterface(CarInterfaceBase):
     self.cp.update_strings(can_strings)
     self.cp_cam.update_strings(can_strings)
 
+    self.cruise_speed_override = True # change this to False if you want to disable this
+
     ret = self.CS.update(self.cp, self.cp_cam)
+
+    if ret.cruiseState.enabled and ret.cruiseState.speed < 12 and self.CP.openpilotLongitudinalControl:
+      if self.cruise_speed_override:
+        if self.init_cruise_speed == 0.:
+          ret.cruiseState.speed = self.init_cruise_speed = max(2.5, ret.vEgo)
+        else:
+          ret.cruiseState.speed = self.init_cruise_speed
+      else:
+        ret.cruiseState.speed = 2.5
+    else:
+      self.init_cruise_speed = 0.
 
     ret.canValid = self.cp.can_valid and self.cp_cam.can_valid
     ret.steeringRateLimited = self.CC.steer_rate_limited if self.CC is not None else False
+    
+    ret.engineRPM = self.CS.engineRPM
 
     # events
     events = self.create_common_events(ret)

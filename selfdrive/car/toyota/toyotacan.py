@@ -77,7 +77,7 @@ def create_ui_command(packer, steer, chime, left_line, right_line, left_lane_dep
     "SET_ME_X01": 1,
     "SET_ME_X01_2": 1,
     "REPEATED_BEEPS": 0,
-    "TWO_BEEPS": chime,
-    "LDA_ALERT": steer,
+    "TWO_BEEPS": 1 if steer else 0,
+    "LDA_ALERT": 2 if steer else 0,
   }
   return packer.make_can_msg("LKAS_HUD", 0, values)

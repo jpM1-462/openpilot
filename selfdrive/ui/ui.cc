@@ -147,9 +147,14 @@ static void update_sockets(UIState *s) {
   UIScene &scene = s->scene;
   if (scene.started && sm.updated("controlsState")) {
     scene.controls_state = sm["controlsState"].getControlsState();
+    s->scene.output_scale = scene.controls_state.getLateralControlState().getPidState().getOutput();
   }
   if (sm.updated("carState")) {
     scene.car_state = sm["carState"].getCarState();
+    s->scene.steerOverride= scene.car_state.getSteeringPressed();
+    s->scene.engineRPM = scene.car_state.getEngineRPM();
+    s->scene.brakeLights = scene.car_state.getBrakeLights();
+    s->scene.aEgo = scene.car_state.getAEgo();
   }
   if (sm.updated("radarState")) {
     std::optional<cereal::ModelDataV2::XYZTData::Reader> line;
