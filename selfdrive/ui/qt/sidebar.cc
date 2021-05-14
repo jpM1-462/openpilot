@@ -39,7 +39,7 @@ Sidebar::Sidebar(QWidget *parent) : QFrame(parent) {
 
   setFixedWidth(300);
   setMinimumHeight(vwp_h);
-  setStyleSheet("background-color: rgb(57, 57, 57);");
+  setStyleSheet("background-color: rgb(0, 0, 0);");
 }
 
 void Sidebar::mousePressEvent(QMouseEvent *event) {
@@ -49,15 +49,9 @@ void Sidebar::mousePressEvent(QMouseEvent *event) {
 }
 
 void Sidebar::update(const UIState &s) {
-  if (s.sm->frame % (6*UI_FREQ) == 0) {
-    connect_str = "OFFLINE";
-    connect_status = warning_color;
-    auto last_ping = params.get<float>("LastAthenaPingTime");
-    if (last_ping) {
-      bool online = nanos_since_boot() - *last_ping < 70e9;
-      connect_str = online ? "ONLINE" : "ERROR";
-      connect_status = online ? good_color : danger_color;
-    }
+  if (true) {
+    connect_str = "DISABLED";
+    connect_status = good_color;
     repaint();
   }
 
@@ -78,7 +72,7 @@ void Sidebar::update(const UIState &s) {
   if (s.scene.pandaType == cereal::PandaState::PandaType::UNKNOWN) {
     panda_status = danger_color;
     panda_str = "NO\nPANDA";
-  } else if (Hardware::TICI() && s.scene.started) {
+  } else if (s.scene.started) {
     panda_str = QString("SAT CNT\n%1").arg(s.scene.satelliteCount);
     panda_status = s.scene.gpsOK ? good_color : warning_color;
   }

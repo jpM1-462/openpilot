@@ -136,6 +136,14 @@ static void update_state(UIState *s) {
   }
   if (sm.updated("carState")) {
     scene.car_state = sm["carState"].getCarState();
+    s->scene.steerOverride= scene.car_state.getSteeringPressed();
+    s->scene.engineRPM = scene.car_state.getEngineRPM();
+    s->scene.brakeLights = scene.car_state.getBrakeLights();
+    s->scene.parkingLightON = scene.car_state.getParkingLightON();
+    s->scene.headlightON = scene.car_state.getHeadlightON();
+    s->scene.aEgo = scene.car_state.getAEgo();
+    s->scene.gas = scene.car_state.getGas();
+    s->scene.lightSensor = scene.car_state.getLightSensor();
   }
   if (sm.updated("radarState")) {
     std::optional<cereal::ModelDataV2::XYZTData::Reader> line;
@@ -345,14 +353,22 @@ void Device::setAwake(bool on, bool reset) {
 }
 
 void Device::updateBrightness(const UIState &s) {
-  float clipped_brightness = std::min(100.0f, (s.scene.light_sensor * brightness_m) + brightness_b);
-  if (Hardware::TICI() && !s.scene.started) {
-    clipped_brightness = BACKLIGHT_OFFROAD;
+  int brightness = BACKLIGHT_OFFROAD;
+
+  if (!s.scene.started) {
+    brightness = BACKLIGHT_OFFROAD;
   }
 
-  int brightness = brightness_filter.update(clipped_brightness);
   if (!awake) {
     brightness = 0;
+  }
+
+  if ((s.scene.car_state.getHeadlightON() && s.scene.car_state.getLightSensor() < 300) || (s.scene.car_state.getLightSensor() < 50)) {
+    brightness = 9.0;
+  } else if (s.scene.car_state.getParkingLightON() && !s.scene.car_state.getHeadlightON() && s.scene.car_state.getLightSensor() < 800) {
+    brightness = 50.0;
+  } else {
+    brightness = 100.0;
   }
 
   if (brightness != last_brightness) {
