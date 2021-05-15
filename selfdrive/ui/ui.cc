@@ -363,9 +363,9 @@ void Device::updateBrightness(const UIState &s) {
     brightness = 0;
   }
 
-  if ((s.scene.car_state.getHeadlightON() && s.scene.car_state.getLightSensor() < 300) || (s.scene.car_state.getLightSensor() < 50)) {
+  if ((s.scene.car_state.getHeadlightON() && s.scene.car_state.getLightSensor() < 300) && !s.scene.car_state.getLightSensor() > 100) {
     brightness = 9.0;
-  } else if (s.scene.car_state.getParkingLightON() && !s.scene.car_state.getHeadlightON() && s.scene.car_state.getLightSensor() < 800) {
+  } else if (s.scene.car_state.getParkingLightON() && !s.scene.car_state.getHeadlightON() && !s.scene.car_state.getLightSensor() > 500) {
     brightness = 50.0;
   } else {
     brightness = 100.0;
