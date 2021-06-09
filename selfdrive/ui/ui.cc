@@ -134,6 +134,12 @@ static void update_state(UIState *s) {
     scene.engageable = sm["controlsState"].getControlsState().getEngageable();
     scene.dm_active = sm["driverMonitoringState"].getDriverMonitoringState().getIsActiveMode();
   }
+  s->scene.engineRPM = sm["carState"].getCarState().getEngineRPM();
+  s->scene.brakeLights = sm["carState"].getCarState().getBrakeLights();
+  s->scene.parkingLightON = sm["carState"].getCarState().getParkingLightON();
+  s->scene.headlightON = sm["carState"].getCarState().getHeadlightON();
+  s->scene.meterDimmed = sm["carState"].getCarState().getMeterDimmed();
+  s->scene.aEgo = sm["carState"].getCarState().getAEgo();
   if (sm.updated("radarState")) {
     std::optional<cereal::ModelDataV2::XYZTData::Reader> line;
     if (sm.rcv_frame("modelV2") > 0) {
@@ -345,16 +351,22 @@ void Device::setAwake(bool on, bool reset) {
 }
 
 void Device::updateBrightness(const UIState &s) {
-  float brightness_b = 10;
-  float brightness_m = 0.1;
-  float clipped_brightness = std::min(100.0f, (s.scene.light_sensor * brightness_m) + brightness_b);
+  int brightness = BACKLIGHT_OFFROAD;
+
   if (!s.scene.started) {
-    clipped_brightness = BACKLIGHT_OFFROAD;
+    brightness = BACKLIGHT_OFFROAD;
   }
 
-  int brightness = brightness_filter.update(clipped_brightness);
   if (!awake) {
     brightness = 0;
+  }
+
+  if ((s.scene.headlightON) && (s.scene.meterDimmed)) {
+    brightness = 8.0;
+  } else if ((s.scene.parkingLightON) && (!s.scene.headlightON) && (s.scene.meterDimmed)) {
+    brightness = 60.0;
+  } else {
+    brightness = 100.0;
   }
 
   if (brightness != last_brightness) {

@@ -25,6 +25,7 @@ class CarInterfaceBase():
   def __init__(self, CP, CarController, CarState):
     self.CP = CP
     self.VM = VehicleModel(CP)
+    self.disengage_on_accelerator = False
 
     self.frame = 0
     self.low_speed_alert = False
@@ -75,7 +76,7 @@ class CarInterfaceBase():
     ret.startAccel = 0.0
     ret.minSpeedCan = 0.3
     ret.stoppingBrakeRate = 0.2 # brake_travel/s while trying to stop
-    ret.startingBrakeRate = 0.8 # brake_travel/s while releasing on restart
+    ret.startingBrakeRate = 1.4 # brake_travel/s while releasing on restart
     ret.stoppingControl = False
     ret.longitudinalTuning.deadzoneBP = [0.]
     ret.longitudinalTuning.deadzoneV = [0.]
@@ -108,7 +109,7 @@ class CarInterfaceBase():
       events.add(EventName.wrongCarMode)
     if cs_out.espDisabled:
       events.add(EventName.espDisabled)
-    if cs_out.gasPressed:
+    if cs_out.gasPressed and self.disengage_on_accelerator:
       events.add(EventName.gasPressed)
     if cs_out.stockFcw:
       events.add(EventName.stockFcw)
@@ -130,7 +131,7 @@ class CarInterfaceBase():
     # Disable on rising edge of gas or brake. Also disable on brake when speed > 0.
     # Optionally allow to press gas at zero speed to resume.
     # e.g. Chrysler does not spam the resume button yet, so resuming with gas is handy. FIXME!
-    if (cs_out.gasPressed and (not self.CS.out.gasPressed) and cs_out.vEgo > gas_resume_speed) or \
+    if (self.disengage_on_accelerator and cs_out.gasPressed and (not self.CS.out.gasPressed) and cs_out.vEgo > gas_resume_speed) or \
        (cs_out.brakePressed and (not self.CS.out.brakePressed or not cs_out.standstill)):
       events.add(EventName.pedalPressed)
 

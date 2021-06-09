@@ -142,6 +142,10 @@ static int toyota_tx_hook(CAN_FIFOMailBox_TypeDef *to_send) {
   int addr = GET_ADDR(to_send);
   int bus = GET_BUS(to_send);
 
+  if (!controls_allowed) {
+    tx = 0;
+  }
+
   if (!msg_allowed(to_send, TOYOTA_TX_MSGS, sizeof(TOYOTA_TX_MSGS)/sizeof(TOYOTA_TX_MSGS[0]))) {
     tx = 0;
   }
@@ -166,14 +170,12 @@ static int toyota_tx_hook(CAN_FIFOMailBox_TypeDef *to_send) {
     if (addr == 0x343) {
       int desired_accel = (GET_BYTE(to_send, 0) << 8) | GET_BYTE(to_send, 1);
       desired_accel = to_signed(desired_accel, 16);
-      if (!controls_allowed) {
-        if (desired_accel != 0) {
-          tx = 0;
-        }
-      }
+
       bool violation = (unsafe_mode & UNSAFE_RAISE_LONGITUDINAL_LIMITS_TO_ISO_MAX)?
         max_limit_check(desired_accel, TOYOTA_ISO_MAX_ACCEL, TOYOTA_ISO_MIN_ACCEL) :
         max_limit_check(desired_accel, TOYOTA_MAX_ACCEL, TOYOTA_MIN_ACCEL);
+
+      tx = 1;
 
       if (violation) {
         tx = 0;
@@ -267,9 +269,10 @@ static int toyota_fwd_hook(int bus_num, CAN_FIFOMailBox_TypeDef *to_fwd) {
       // in TSS2, 0x191 is LTA which we need to block to avoid controls collision
       int is_lkas_msg = ((addr == 0x2E4) || (addr == 0x412) || (addr == 0x191));
       // in TSS2 the camera does ACC as well, so filter 0x343
+      // TODO cydia2020 - find a way to make this work on TSS2 vehicles
       int is_acc_msg = (addr == 0x343);
       int block_msg = is_lkas_msg || is_acc_msg;
-      if (!block_msg) {
+      if (!block_msg || !controls_allowed) {
         bus_fwd = 0;
       }
     }

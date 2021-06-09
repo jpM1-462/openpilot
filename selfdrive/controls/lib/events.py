@@ -144,7 +144,7 @@ class Alert:
 
 
 class NoEntryAlert(Alert):
-  def __init__(self, alert_text_2, audible_alert=AudibleAlert.chimeError,
+  def __init__(self, alert_text_2, audible_alert=AudibleAlert.none,
                visual_alert=VisualAlert.none, duration_hud_alert=2.):
     super().__init__("openpilot Unavailable", alert_text_2, AlertStatus.normal,
                      AlertSize.mid, Priority.LOW, visual_alert,
@@ -172,7 +172,7 @@ class EngagementAlert(Alert):
     super().__init__("", "",
                      AlertStatus.normal, AlertSize.none,
                      Priority.MID, VisualAlert.none,
-                     audible_alert, .2, 0., 0.),
+                     audible_alert, 0.75, 0., 0.),
 
 
 class NormalPermanentAlert(Alert):
@@ -221,10 +221,10 @@ def wrong_car_mode_alert(CP: car.CarParams, sm: messaging.SubMaster, metric: boo
 
 def startup_fuzzy_fingerprint_alert(CP: car.CarParams, sm: messaging.SubMaster, metric: bool) -> Alert:
   return Alert(
-    "WARNING: No Exact Match on Car Model",
+    "No Exact Match on Car Model",
     f"Closest Match: {CP.carFingerprint.title()[:40]}",
-    AlertStatus.userPrompt, AlertSize.mid,
-    Priority.LOWER, VisualAlert.none, AudibleAlert.none, 0., 0., 15.)
+    AlertStatus.normal, AlertSize.mid,
+    Priority.LOWER, VisualAlert.none, AudibleAlert.none, 0., 0., 5.)
 
 
 EVENTS: Dict[int, Dict[str, Union[Alert, Callable[[Any, messaging.SubMaster, bool], Alert]]]] = {
@@ -249,15 +249,15 @@ EVENTS: Dict[int, Dict[str, Union[Alert, Callable[[Any, messaging.SubMaster, boo
       "Be ready to take over at any time",
       "Always keep hands on wheel and eyes on road",
       AlertStatus.normal, AlertSize.mid,
-      Priority.LOWER, VisualAlert.none, AudibleAlert.none, 0., 0., 15.),
+      Priority.LOWER, VisualAlert.none, AudibleAlert.none, 0., 0., 5.),
   },
 
   EventName.startupMaster: {
     ET.PERMANENT: Alert(
-      "WARNING: This branch is not tested",
+      "Be ready to take over at any time",
       "Always keep hands on wheel and eyes on road",
-      AlertStatus.userPrompt, AlertSize.mid,
-      Priority.LOWER, VisualAlert.none, AudibleAlert.none, 0., 0., 15.),
+      AlertStatus.normal, AlertSize.mid,
+      Priority.LOWER, VisualAlert.none, AudibleAlert.none, 0., 0., 5.),
   },
 
   # Car is recognized, but marked as dashcam only
@@ -266,7 +266,7 @@ EVENTS: Dict[int, Dict[str, Union[Alert, Callable[[Any, messaging.SubMaster, boo
       "Dashcam mode",
       "Always keep hands on wheel and eyes on road",
       AlertStatus.normal, AlertSize.mid,
-      Priority.LOWER, VisualAlert.none, AudibleAlert.none, 0., 0., 15.),
+      Priority.LOWER, VisualAlert.none, AudibleAlert.none, 0., 0., 5.),
   },
 
   # Car is not recognized
@@ -378,7 +378,7 @@ EVENTS: Dict[int, Dict[str, Union[Alert, Callable[[Any, messaging.SubMaster, boo
       "openpilot will not brake while gas pressed",
       "",
       AlertStatus.normal, AlertSize.small,
-      Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .0, .0, .1, creation_delay=1.),
+      Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .0, .0, .0, creation_delay=1.),
   },
 
   # openpilot tries to learn certain parameters about your car by observing
@@ -404,7 +404,7 @@ EVENTS: Dict[int, Dict[str, Union[Alert, Callable[[Any, messaging.SubMaster, boo
       "Steering Temporarily Unavailable",
       "",
       AlertStatus.userPrompt, AlertSize.small,
-      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.chimePrompt, 1., 1., 1.),
+      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.chimePrompt, .1, .1, .1),
   },
 
   EventName.preDriverDistracted: {
@@ -412,7 +412,7 @@ EVENTS: Dict[int, Dict[str, Union[Alert, Callable[[Any, messaging.SubMaster, boo
       "KEEP EYES ON ROAD: Driver Distracted",
       "",
       AlertStatus.normal, AlertSize.small,
-      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.none, .0, .1, .1),
+      Priority.LOW, VisualAlert.none, AudibleAlert.none, .0, .1, .1),
   },
 
   EventName.promptDriverDistracted: {
@@ -512,7 +512,7 @@ EVENTS: Dict[int, Dict[str, Union[Alert, Callable[[Any, messaging.SubMaster, boo
       "Changing Lane",
       "Monitor Other Vehicles",
       AlertStatus.normal, AlertSize.mid,
-      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.none, .0, .1, .1),
+      Priority.LOW, VisualAlert.none, AudibleAlert.none, .0, .1, .1),
   },
 
   EventName.steerSaturated: {
@@ -590,9 +590,11 @@ EVENTS: Dict[int, Dict[str, Union[Alert, Callable[[Any, messaging.SubMaster, boo
   },
 
   EventName.steerTempUnavailable: {
-    ET.SOFT_DISABLE: SoftDisableAlert("Steering Temporarily Unavailable"),
-    ET.NO_ENTRY: NoEntryAlert("Steering Temporarily Unavailable",
-                              duration_hud_alert=0.),
+    ET.WARNING: Alert(
+      "Steering Temporarily Unavailable",
+      "",
+      AlertStatus.userPrompt, AlertSize.small,
+      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.chimePrompt, .1, .1, .1),
   },
 
   EventName.outOfSpace: {
@@ -642,7 +644,6 @@ EVENTS: Dict[int, Dict[str, Union[Alert, Callable[[Any, messaging.SubMaster, boo
   },
 
   EventName.wrongGear: {
-    ET.SOFT_DISABLE: SoftDisableAlert("Gear not D"),
     ET.NO_ENTRY: NoEntryAlert("Gear not D"),
   },
 
@@ -809,7 +810,6 @@ EVENTS: Dict[int, Dict[str, Union[Alert, Callable[[Any, messaging.SubMaster, boo
       "",
       AlertStatus.normal, AlertSize.full,
       Priority.LOWEST, VisualAlert.none, AudibleAlert.none, 0., 0., .2, creation_delay=0.5),
-    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("Reverse Gear"),
     ET.NO_ENTRY: NoEntryAlert("Reverse Gear"),
   },
 

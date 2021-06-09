@@ -41,7 +41,7 @@ Sidebar::Sidebar(QWidget *parent) : QFrame(parent) {
 
   setFixedWidth(300);
   setMinimumHeight(vwp_h);
-  setStyleSheet("background-color: rgb(57, 57, 57);");
+  setStyleSheet("background-color: rgb(0, 0, 0);");
 }
 
 void Sidebar::mousePressEvent(QMouseEvent *event) {
@@ -57,15 +57,8 @@ void Sidebar::updateState(const UIState &s) {
   setProperty("netType", network_type[deviceState.getNetworkType()]);
   setProperty("netStrength", (int)deviceState.getNetworkStrength());
 
-  auto last_ping = deviceState.getLastAthenaPingTime();
-  if (last_ping == 0) {
-    setProperty("connectStr", "OFFLINE");
-    setProperty("connectStatus", warning_color);
-  } else {
-    bool online = nanos_since_boot() - last_ping < 80e9;
-    setProperty("connectStr",  online ? "ONLINE" : "ERROR");
-    setProperty("connectStatus", online ? good_color : danger_color);
-  }
+  setProperty("connectStr", "DISABLED");
+  setProperty("connectStatus", good_color);
 
   QColor tempStatus = danger_color;
   auto ts = deviceState.getThermalStatus();
@@ -82,7 +75,7 @@ void Sidebar::updateState(const UIState &s) {
   if (s.scene.pandaType == cereal::PandaState::PandaType::UNKNOWN) {
     pandaStatus = danger_color;
     pandaStr = "NO\nPANDA";
-  } else if (Hardware::TICI() && s.scene.started) {
+  } else if (s.scene.started) {
     pandaStr = QString("SATS %1\nACC %2").arg(s.scene.satelliteCount).arg(fmin(10, s.scene.gpsAccuracy), 0, 'f', 2);
     pandaStatus = sm["liveLocationKalman"].getLiveLocationKalman().getGpsOK() ? good_color : warning_color;
   }
