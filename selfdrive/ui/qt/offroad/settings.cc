@@ -292,7 +292,7 @@ SettingsWindow::SettingsWindow(QWidget *parent) : QFrame(parent) {
   panel_widget = new QStackedWidget();
   panel_widget->setStyleSheet(R"(
     border-radius: 30px;
-    background-color: #292929;
+    background-color: #000000;
   )");
 
   // close button
