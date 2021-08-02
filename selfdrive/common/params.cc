@@ -165,7 +165,7 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"CompletedTrainingVersion", PERSISTENT},
     {"DisablePowerDown", PERSISTENT},
     {"DisableUpdates", PERSISTENT},
-    {"EnableWideCamera", PERSISTENT},
+    {"EnableWideCamera", CLEAR_ON_MANAGER_START},
     {"DoUninstall", CLEAR_ON_MANAGER_START},
     {"DongleId", PERSISTENT},
     {"GitDiff", PERSISTENT},
@@ -186,7 +186,7 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"IsTakingSnapshot", CLEAR_ON_MANAGER_START},
     {"IsUpdateAvailable", CLEAR_ON_MANAGER_START},
     {"UploadRaw", PERSISTENT},
-    {"LastAthenaPingTime", PERSISTENT},
+    {"LastAthenaPingTime", CLEAR_ON_MANAGER_START},
     {"LastGPSPosition", PERSISTENT},
     {"LastUpdateException", PERSISTENT},
     {"LastUpdateTime", PERSISTENT},
@@ -199,6 +199,7 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"PandaFirmwareHex", CLEAR_ON_MANAGER_START | CLEAR_ON_PANDA_DISCONNECT},
     {"PandaDongleId", CLEAR_ON_MANAGER_START | CLEAR_ON_PANDA_DISCONNECT},
     {"Passive", PERSISTENT},
+    {"PrimeRedirected", PERSISTENT},
     {"RecordFront", PERSISTENT},
     {"RecordFrontLock", PERSISTENT},  // for the internal fleet
     {"ReleaseNotes", PERSISTENT},
@@ -326,12 +327,12 @@ std::string Params::get(const char *key, bool block) {
   }
 }
 
-int Params::readAll(std::map<std::string, std::string> *params) {
+std::map<std::string, std::string> Params::readAll() {
   FileLock file_lock(params_path + "/.lock", LOCK_SH);
   std::lock_guard<FileLock> lk(file_lock);
 
   std::string key_path = params_path + "/d";
-  return util::read_files_in_dir(key_path, params);
+  return util::read_files_in_dir(key_path);
 }
 
 void Params::clearAll(ParamKeyType key_type) {
