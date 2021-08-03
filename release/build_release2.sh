@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -e
 
-export GIT_COMMITTER_NAME="Vehicle Researcher"
-export GIT_COMMITTER_EMAIL="user@comma.ai"
-export GIT_AUTHOR_NAME="Vehicle Researcher"
-export GIT_AUTHOR_EMAIL="user@comma.ai"
+export GIT_COMMITTER_NAME="cydia2020"
+export GIT_COMMITTER_EMAIL=" 12470297+cydia2020@users.noreply.github.com"
+export GIT_AUTHOR_NAME="cydia2020"
+export GIT_AUTHOR_EMAIL=" 12470297+cydia2020@users.noreply.github.com"
 
 export GIT_SSH_COMMAND="ssh -i /data/gitkey"
 
@@ -17,7 +17,7 @@ if [ ! -z "$CLEAN" ]; then
 
   # Create git repo
   git init
-  git remote add origin git@github.com:commaai/openpilot.git
+  git remote add origin git@github.com:cydia2020/dodgypilot.git
   git fetch origin devel-staging
 else
   cd /data/openpilot
@@ -26,7 +26,6 @@ else
 fi
 
 git fetch origin release2-staging
-git fetch origin dashcam-staging
 
 # Create release2 with no history
 if [ ! -z "$CLEAN" ]; then
@@ -42,7 +41,7 @@ git commit -m "openpilot v$VERSION"
 
 # Build signed panda firmware
 pushd panda/
-CERT=/tmp/pandaextra/certs/release RELEASE=1 scons -u .
+CERT=/data/openpilot/panda/certs/debug RELEASE=0 scons -u .
 mv board/obj/panda.bin.signed /tmp/panda.bin.signed
 popd
 
@@ -50,10 +49,6 @@ popd
 ln -sfn /data/openpilot /data/pythonpath
 export PYTHONPATH="/data/openpilot:/data/openpilot/pyextra"
 scons -j3
-
-# Run tests
-python selfdrive/manager/test/test_manager.py
-selfdrive/car/tests/test_car_interfaces.py
 
 # Ensure no submodules in release
 if test "$(git submodule--helper list | wc -l)" -gt "0"; then
@@ -90,15 +85,7 @@ git commit --amend -m "openpilot v$VERSION"
 # Print committed files that are normally gitignored
 #git status --ignored
 
-if [ ! -z "$PUSH" ]; then
-  git remote set-url origin git@github.com:commaai/openpilot.git
+git remote set-url origin git@github.com:cydia2020/dodgypilot.git
 
-  # Push to release2-staging
-  git push -f origin release2-staging
-
-  # Create dashcam release
-  git rm selfdrive/car/*/carcontroller.py
-
-  git commit -m "create dashcam release from release2"
-  git push -f origin release2-staging:dashcam-staging
-fi
+# Push to release2-staging
+git push -f origin release2-staging

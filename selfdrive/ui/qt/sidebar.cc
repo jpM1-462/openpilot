@@ -43,7 +43,7 @@ Sidebar::Sidebar(QWidget *parent) : QFrame(parent) {
 
   setFixedWidth(300);
   setMinimumHeight(vwp_h);
-  setStyleSheet("background-color: rgb(57, 57, 57);");
+  setStyleSheet("background-color: rgb(0, 0, 0);");
 }
 
 void Sidebar::mouseReleaseEvent(QMouseEvent *event) {
@@ -60,20 +60,8 @@ void Sidebar::updateState(const UIState &s) {
   int strength = (int)deviceState.getNetworkStrength();
   setProperty("netStrength", strength > 0 ? strength + 1 : 0);
 
-  auto last_ping = deviceState.getLastAthenaPingTime();
-  if (last_ping == 0) {
-    if (params.getBool("PrimeRedirected")) {
-      setProperty("connectStr", "NO\nPRIME");
-      setProperty("connectStatus", danger_color);
-    } else {
-      setProperty("connectStr", "CONNECT\nOFFLINE");
-      setProperty("connectStatus", warning_color);
-    }
-  } else {
-    bool online = nanos_since_boot() - last_ping < 80e9;
-    setProperty("connectStr",  (online ? "CONNECT\nONLINE" : "CONNECT\nERROR"));
-    setProperty("connectStatus", online ? good_color : danger_color);
-  }
+  setProperty("connectStr", "CONNECT\nDISABLED");
+  setProperty("connectStatus", good_color);
 
   QColor tempStatus = danger_color;
   auto ts = deviceState.getThermalStatus();

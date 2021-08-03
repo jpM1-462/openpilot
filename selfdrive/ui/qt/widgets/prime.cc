@@ -32,7 +32,7 @@ void PairingQRWidget::showEvent(QShowEvent *event) {
 
 void PairingQRWidget::refresh() {
   QString pairToken = CommaApi::create_jwt({{"pair", true}});
-  QString qrString = "https://connect.comma.ai/?pair=" + pairToken;
+  QString qrString = "https://127.0.0.1/?pair=" + pairToken;
   this->updateQrCode(qrString);
 }
 
@@ -111,7 +111,7 @@ PrimeUserWidget::PrimeUserWidget(QWidget* parent) : QWidget(parent) {
 
   // set up API requests
   if (auto dongleId = getDongleId()) {
-    QString url = "https://api.commadotai.com/v1/devices/" + *dongleId + "/owner";
+    QString url = "https://127.0.0.1/v1/devices/" + *dongleId + "/owner";
     RequestRepeater *repeater = new RequestRepeater(this, url, "ApiCache_Owner", 6);
     QObject::connect(repeater, &RequestRepeater::receivedResponse, this, &PrimeUserWidget::replyFinished);
   }
@@ -256,7 +256,7 @@ SetupWidget::SetupWidget(QWidget* parent) : QFrame(parent) {
 
   // set up API requests
   if (auto dongleId = getDongleId()) {
-    QString url = "https://api.commadotai.com/v1.1/devices/" + *dongleId + "/";
+    QString url = "https://127.0.0.1/v1.1/devices/" + *dongleId + "/";
     RequestRepeater* repeater = new RequestRepeater(this, url, "ApiCache_Device", 5);
 
     QObject::connect(repeater, &RequestRepeater::receivedResponse, this, &SetupWidget::replyFinished);
