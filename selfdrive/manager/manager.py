@@ -202,9 +202,15 @@ if __name__ == "__main__":
     add_file_handler(cloudlog)
     cloudlog.exception("Manager failed to start")
 
+    try:
+      result = subprocess.check_output(["ifconfig", "wlan0"], encoding='utf8')
+      ip = re.findall(r"inet addr:((\d+\.){3}\d+)", result)[0][0]
+    except:
+      ip = 'N/A'
+
     # Show last 3 lines of traceback
     error = traceback.format_exc(-3)
-    error = "Manager failed to start\n\n" + error
+    error = ("Manager failed to start (IP: %s)\n \n" % ip) + error
     with TextWindow(error) as t:
       t.wait_for_exit()
 
