@@ -268,11 +268,27 @@ static int toyota_fwd_hook(int bus_num, CAN_FIFOMailBox_TypeDef *to_fwd) {
       // in TSS2, 0x191 is LTA which we need to block to avoid controls collision
       int is_lkas_msg = ((addr == 0x2E4) || (addr == 0x412) || (addr == 0x191));
       // in TSS2 the camera does ACC as well, so filter 0x343
-      // TODO cydia2020 - find a way to make this work on TSS2 vehicles
       int is_acc_msg = (addr == 0x343);
-      int block_msg = is_lkas_msg || is_acc_msg;
-      if (!block_msg || !controls_allowed) {
-        bus_fwd = 0;
+	  // detect if car has LTA message, TSS 2 if it has
+      if (addr == 0x191) {
+        tss2 = 1;
+      }
+	  // block messages
+      if (tss2 && controls_allowed) { // block all messages on TSS 2 when controls are allowed
+        int block_msg = is_lkas_msg || is_acc_msg;
+        if (!block_msg) {
+          bus_fwd = 0;
+        }
+      } else if (tss2 && !controls_allowed) { // don't block LDA message on TSS 2 when not engaged
+        int block_msg = is_acc_msg;
+        if (!block_msg) {
+          bus_fwd = 0;
+        }
+      } else {  // only block on TSS-P cars when openpilot is not in control
+        int block_msg = is_lkas_msg || is_acc_msg;
+        if (!block_msg || !controls_allowed) {
+          bus_fwd = 0;
+        }
       }
     }
   }
