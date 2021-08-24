@@ -57,15 +57,6 @@ void Sidebar::updateState(const UIState &s) {
   int strength = (int)deviceState.getNetworkStrength();
   setProperty("netStrength", strength > 0 ? strength + 1 : 0);
 
-  ItemStatus connectstatus;
-  auto last_ping = deviceState.getLastAthenaPingTime();
-  if (last_ping == 0) {
-    connectstatus = params.getBool("PrimeRedirected") ? ItemStatus{"NO\nPRIME", danger_color} : ItemStatus{"CONNECT\nOFFLINE", warning_color};
-  } else {
-    connectstatus = nanos_since_boot() - last_ping < 80e9 ? ItemStatus{"CONNECT\nONLINE", good_color} : ItemStatus{"CONNECT\nERROR", danger_color};
-  }
-  setProperty("connectStatus", QVariant::fromValue(connectstatus));
-
   QColor tempColor = danger_color;
   auto ts = deviceState.getThermalStatus();
   if (ts == cereal::DeviceState::ThermalStatus::GREEN) {
@@ -89,7 +80,7 @@ void Sidebar::paintEvent(QPaintEvent *event) {
   p.setPen(Qt::NoPen);
   p.setRenderHint(QPainter::Antialiasing);
 
-  p.fillRect(rect(), QColor(57, 57, 57));
+  p.fillRect(rect(), QColor(0, 0, 0));
 
   // static imgs
   p.setOpacity(0.65);
@@ -112,7 +103,6 @@ void Sidebar::paintEvent(QPaintEvent *event) {
   p.drawText(r, Qt::AlignCenter, net_type);
 
   // metrics
-  drawMetric(p, "TEMP", temp_status.first, temp_status.second, 338);
-  drawMetric(p, panda_status.first, "", panda_status.second, 518);
-  drawMetric(p, connect_status.first, "", connect_status.second, 676);
+  drawMetric(p, "TEMP", temp_status.first, temp_status.second, 398);
+  drawMetric(p, panda_status.first, "", panda_status.second, 578);
 }

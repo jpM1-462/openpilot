@@ -14,7 +14,7 @@ const uint32_t TOYOTA_RT_INTERVAL = 250000;    // 250ms between real time checks
 
 // longitudinal limits
 const int TOYOTA_MAX_ACCEL = 1500;        // 1.5 m/s2
-const int TOYOTA_MIN_ACCEL = -3000;       // -3.0 m/s2
+const int TOYOTA_MIN_ACCEL = -3500;       // -3.0 m/s2
 
 const int TOYOTA_ISO_MAX_ACCEL = 2000;        // 2.0 m/s2
 const int TOYOTA_ISO_MIN_ACCEL = -3500;       // -3.5 m/s2
@@ -42,6 +42,7 @@ AddrCheckStruct toyota_rx_checks[] = {
            {0x226, 0, 8, .check_checksum = false, .expected_timestep = 25000U}, { 0 }}},
 };
 const int TOYOTA_RX_CHECKS_LEN = sizeof(toyota_rx_checks) / sizeof(toyota_rx_checks[0]);
+int tss2 = 0;
 
 // global actuation limit states
 int toyota_dbc_eps_torque_factor = 100;   // conversion factor for STEER_TORQUE_EPS in %: see dbc file
@@ -142,6 +143,10 @@ static int toyota_tx_hook(CAN_FIFOMailBox_TypeDef *to_send) {
   int addr = GET_ADDR(to_send);
   int bus = GET_BUS(to_send);
 
+  if (!controls_allowed) {
+    tx = 0;
+  }
+
   if (!msg_allowed(to_send, TOYOTA_TX_MSGS, sizeof(TOYOTA_TX_MSGS)/sizeof(TOYOTA_TX_MSGS[0]))) {
     tx = 0;
   }
@@ -166,14 +171,11 @@ static int toyota_tx_hook(CAN_FIFOMailBox_TypeDef *to_send) {
     if (addr == 0x343) {
       int desired_accel = (GET_BYTE(to_send, 0) << 8) | GET_BYTE(to_send, 1);
       desired_accel = to_signed(desired_accel, 16);
-      if (!controls_allowed) {
-        if (desired_accel != 0) {
-          tx = 0;
-        }
-      }
       bool violation = (unsafe_mode & UNSAFE_RAISE_LONGITUDINAL_LIMITS_TO_ISO_MAX)?
         max_limit_check(desired_accel, TOYOTA_ISO_MAX_ACCEL, TOYOTA_ISO_MIN_ACCEL) :
         max_limit_check(desired_accel, TOYOTA_MAX_ACCEL, TOYOTA_MIN_ACCEL);
+
+      tx = 1;
 
       if (violation) {
         tx = 0;
@@ -268,9 +270,26 @@ static int toyota_fwd_hook(int bus_num, CAN_FIFOMailBox_TypeDef *to_fwd) {
       int is_lkas_msg = ((addr == 0x2E4) || (addr == 0x412) || (addr == 0x191));
       // in TSS2 the camera does ACC as well, so filter 0x343
       int is_acc_msg = (addr == 0x343);
-      int block_msg = is_lkas_msg || is_acc_msg;
-      if (!block_msg) {
-        bus_fwd = 0;
+	  // detect if car has LTA message, TSS 2 if it has
+      if (addr == 0x191) {
+        tss2 = 1;
+      }
+	  // block messages
+      if (tss2 && controls_allowed) { // block all messages on TSS 2 when controls are allowed
+        int block_msg = is_lkas_msg || is_acc_msg;
+        if (!block_msg) {
+          bus_fwd = 0;
+        }
+      } else if (tss2 && !controls_allowed) { // don't block LDA message on TSS 2 when not engaged
+        int block_msg = is_acc_msg;
+        if (!block_msg) {
+          bus_fwd = 0;
+        }
+      } else {  // only block on TSS-P cars when openpilot is not in control
+        int block_msg = is_lkas_msg || is_acc_msg;
+        if (!block_msg || !controls_allowed) {
+          bus_fwd = 0;
+        }
       }
     }
   }
