@@ -221,8 +221,8 @@ def wrong_car_mode_alert(CP: car.CarParams, sm: messaging.SubMaster, metric: boo
 
 def startup_fuzzy_fingerprint_alert(CP: car.CarParams, sm: messaging.SubMaster, metric: bool) -> Alert:
   return Alert(
-    "No Exact Match on Car Model",
-    f"Closest Match: {CP.carFingerprint.title()[:40]}",
+    "Be ready to take over at any time",
+    f"Fuzzy Match: {CP.carFingerprint.title()[:40]}",
     AlertStatus.normal, AlertSize.mid,
     Priority.LOWER, VisualAlert.none, AudibleAlert.none, 0., 0., 5.)
 
@@ -516,7 +516,7 @@ EVENTS: Dict[int, Dict[str, Union[Alert, Callable[[Any, messaging.SubMaster, boo
       "TAKE CONTROL",
       "Turn Exceeds Steering Limit",
       AlertStatus.userPrompt, AlertSize.mid,
-      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.chimePrompt, 1., 1., 1.),
+      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.chimePrompt, .1, .1, .1),
   },
 
   # Thrown when the fan is driven at >50% but is not rotating
