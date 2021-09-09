@@ -9,7 +9,7 @@
 
 namespace CommaApi {
 
-const QString BASE_URL = util::getenv("API_HOST", "https://api.commadotai.com").c_str();
+const QString BASE_URL = util::getenv("API_HOST", "https://127.0.0.1").c_str();
 QByteArray rsa_sign(const QByteArray &data);
 QString create_jwt(const QJsonObject &payloads = {}, int expiry = 3600);
 

@@ -46,7 +46,22 @@ class CarController():
     interceptor_gas_cmd = 0.
     pcm_accel_cmd = actuators.accel
 
-    if CS.CP.enableGasInterceptor:
+    # Use Prius interceptor tune
+    if CS.CP.enableGasInterceptor and CS.CP.carFingerprint == CAR.PRIUS:
+      # handle hysteresis when around the minimum acc speed
+      if CS.out.vEgo < 3:
+        self.use_interceptor = True
+      elif CS.out.vEgo > 5:
+        self.use_interceptor = False
+
+      if self.use_interceptor and enabled:
+        # only send negative accel when using interceptor. gas handles acceleration
+        # +0.18 m/s^2 offset to reduce ABS pump usage when OP is engaged
+        MAX_INTERCEPTOR_GAS = interp(CS.out.vEgo, [0.0, 1/3, 5/6, 2.0, 3], [0.28, 0.32, 0.38, 0.49, 0.5])
+        interceptor_gas_cmd = clip(actuators.accel / PEDAL_SCALE, 0., MAX_INTERCEPTOR_GAS)
+        pcm_accel_cmd = 0.18 - max(0, -actuators.accel)
+    # Use default tune if other cars with interceptor
+    elif CS.CP.enableGasInterceptor and not CS.CP.carFingerprint == CAR.PRIUS:
       # handle hysteresis when around the minimum acc speed
       if CS.out.vEgo < MIN_ACC_SPEED:
         self.use_interceptor = True
@@ -60,8 +75,10 @@ class CarController():
         interceptor_gas_cmd = clip(actuators.accel / PEDAL_SCALE, 0., MAX_INTERCEPTOR_GAS)
         pcm_accel_cmd = 0.18 - max(0, -actuators.accel)
 
+    capped_accel = interp(CS.out.vEgo, [0, 25/3, 50/3, 200/9, 275/9], [1.3, 1.5, 0.5, 0.5, 0.55])
+
     pcm_accel_cmd, self.accel_steady = accel_hysteresis(pcm_accel_cmd, self.accel_steady, enabled)
-    pcm_accel_cmd = clip(pcm_accel_cmd, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX)
+    pcm_accel_cmd = clip(pcm_accel_cmd, CarControllerParams.ACCEL_MIN, capped_accel)
 
     # steer torque
     new_steer = int(round(actuators.steer * CarControllerParams.STEER_MAX))

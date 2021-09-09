@@ -47,13 +47,13 @@ int mkdir_p(std::string path) {
   for (char *p = _path + 1; *p; p++) {
     if (*p == '/') {
       *p = '\0'; // Temporarily truncate
-      if (mkdir(_path, 0775) != 0) {
+      if (mkdir(_path, 0777) != 0) {
         if (errno != EEXIST) return -1;
       }
       *p = '/';
     }
   }
-  if (mkdir(_path, 0775) != 0) {
+  if (mkdir(_path, 0777) != 0) {
     if (errno != EEXIST) return -1;
   }
   return 0;
@@ -104,7 +104,7 @@ class FileLock {
   FileLock(const std::string& file_name, int op) : fn_(file_name), op_(op) {}
 
   void lock() {
-    fd_ = HANDLE_EINTR(open(fn_.c_str(), O_CREAT, 0775));
+    fd_ = HANDLE_EINTR(open(fn_.c_str(), O_CREAT, 0777));
     if (fd_ < 0) {
       LOGE("Failed to open lock file %s, errno=%d", fn_.c_str(), errno);
       return;
