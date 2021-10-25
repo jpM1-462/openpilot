@@ -5,7 +5,7 @@ from selfdrive.car.toyota.toyotacan import create_steer_command, create_ui_comma
                                            create_accel_command, create_acc_cancel_command, \
                                            create_fcw_command, create_lta_steer_command
 from selfdrive.car.toyota.values import CAR, STATIC_DSU_MSGS, NO_STOP_TIMER_CAR, TSS2_CAR, \
-                                        MIN_ACC_SPEED, PEDAL_HYST_GAP, PEDAL_SCALE, CarControllerParams
+                                        MIN_ACC_SPEED, PEDAL_HYST_GAP, CarControllerParams
 from opendbc.can.packer import CANPacker
 VisualAlert = car.CarControl.HUDControl.VisualAlert
 
@@ -46,7 +46,24 @@ class CarController():
     interceptor_gas_cmd = 0.
     pcm_accel_cmd = actuators.accel
 
-    if CS.CP.enableGasInterceptor:
+    # Prius interceptor tune
+    if CS.CP.enableGasInterceptor and CS.CP.carFingerprint == CAR.PRIUS:
+      # handle hysteresis when around the minimum acc speed
+      if CS.out.vEgo <= 3:
+        self.use_interceptor = True
+      elif CS.out.vEgo > 3.5:
+        self.use_interceptor = False
+
+      if self.use_interceptor and enabled:
+        # only send negative accel when using interceptor. gas handles acceleration
+        # +0.18 m/s^2 offset to reduce ABS pump usage when OP is engaged
+        # on Prius, keep interceptor steady for a while for EV startup then ramp up quickly
+        MAX_INTERCEPTOR_GAS = interp(CS.out.vEgo, [0.0, 3.0], [0.3, 0.5])
+        PEDAL_SCALE = interp(CS.out.vEgo, [0.0, 3.0], [2.5, 2.0])
+        interceptor_gas_cmd = clip(actuators.accel / PEDAL_SCALE, 0., MAX_INTERCEPTOR_GAS)
+        pcm_accel_cmd = 0.18 - max(0, -actuators.accel)
+    # Use default tune if car is not Prius and has interceptor
+    elif CS.CP.enableGasInterceptor and not CS.CP.carFingerprint == CAR.PRIUS:
       # handle hysteresis when around the minimum acc speed
       if CS.out.vEgo < MIN_ACC_SPEED:
         self.use_interceptor = True
@@ -57,11 +74,13 @@ class CarController():
         # only send negative accel when using interceptor. gas handles acceleration
         # +0.18 m/s^2 offset to reduce ABS pump usage when OP is engaged
         MAX_INTERCEPTOR_GAS = interp(CS.out.vEgo, [0.0, MIN_ACC_SPEED], [0.2, 0.5])
+        PEDAL_SCALE = interp(CS.out.vEgo, [0.0, MIN_ACC_SPEED], [3.0, 1.5])
         interceptor_gas_cmd = clip(actuators.accel / PEDAL_SCALE, 0., MAX_INTERCEPTOR_GAS)
         pcm_accel_cmd = 0.18 - max(0, -actuators.accel)
 
+    capped_accel = interp(CS.out.vEgo, [0, 25/3, 50/3], [1.5, 1.4, 0.5])
     pcm_accel_cmd, self.accel_steady = accel_hysteresis(pcm_accel_cmd, self.accel_steady, enabled)
-    pcm_accel_cmd = clip(pcm_accel_cmd, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX)
+    pcm_accel_cmd = clip(pcm_accel_cmd, CarControllerParams.ACCEL_MIN, capped_accel)
 
     # steer torque
     new_steer = int(round(actuators.steer * CarControllerParams.STEER_MAX))

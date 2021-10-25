@@ -91,15 +91,15 @@ OffroadHome::OffroadHome(QWidget* parent) : QFrame(parent) {
   update_notif->setVisible(false);
   update_notif->setStyleSheet("background-color: #364DEF;");
   QObject::connect(update_notif, &QPushButton::clicked, [=]() { center_layout->setCurrentIndex(1); });
-  header_layout->addWidget(update_notif, 0, Qt::AlignHCenter | Qt::AlignRight);
+//  header_layout->addWidget(update_notif, 0, Qt::AlignHCenter | Qt::AlignRight);
 
   alert_notif = new QPushButton();
   alert_notif->setVisible(false);
   alert_notif->setStyleSheet("background-color: #E22C2C;");
   QObject::connect(alert_notif, &QPushButton::clicked, [=] { center_layout->setCurrentIndex(2); });
-  header_layout->addWidget(alert_notif, 0, Qt::AlignHCenter | Qt::AlignRight);
+//  header_layout->addWidget(alert_notif, 0, Qt::AlignHCenter | Qt::AlignRight);
 
-  header_layout->addWidget(new QLabel(getBrandVersion()), 0, Qt::AlignHCenter | Qt::AlignRight);
+//  header_layout->addWidget(new QLabel(getBrandVersion()), 0, Qt::AlignHCenter | Qt::AlignRight);
 
   main_layout->addLayout(header_layout);
 
@@ -111,10 +111,10 @@ OffroadHome::OffroadHome(QWidget* parent) : QFrame(parent) {
   QHBoxLayout* statsAndSetup = new QHBoxLayout(statsAndSetupWidget);
   statsAndSetup->setMargin(0);
   statsAndSetup->setSpacing(30);
-  statsAndSetup->addWidget(new DriveStats, 1);
-  statsAndSetup->addWidget(new SetupWidget);
+//  statsAndSetup->addWidget(new DriveStats, 1);
+//  statsAndSetup->addWidget(new SetupWidget);
 
-  center_layout->addWidget(statsAndSetupWidget);
+//  center_layout->addWidget(statsAndSetupWidget);
 
   // add update & alerts widgets
   update_widget = new UpdateAlert();
@@ -122,9 +122,9 @@ OffroadHome::OffroadHome(QWidget* parent) : QFrame(parent) {
   center_layout->addWidget(update_widget);
   alerts_widget = new OffroadAlert();
   QObject::connect(alerts_widget, &OffroadAlert::dismiss, [=]() { center_layout->setCurrentIndex(0); });
-  center_layout->addWidget(alerts_widget);
+//  center_layout->addWidget(alerts_widget);
 
-  main_layout->addLayout(center_layout, 1);
+//  main_layout->addLayout(center_layout, 1);
 
   // set up refresh timer
   timer = new QTimer(this);
@@ -159,7 +159,7 @@ void OffroadHome::hideEvent(QHideEvent *event) {
 }
 
 void OffroadHome::refresh() {
-  date->setText(QDateTime::currentDateTime().toString("dddd, MMMM d"));
+//  date->setText(QDateTime::currentDateTime().toString("dddd, MMMM d"));
 
   bool updateAvailable = update_widget->refresh();
   int alerts = alerts_widget->refresh();

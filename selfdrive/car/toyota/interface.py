@@ -22,6 +22,7 @@ class CarInterface(CarInterfaceBase):
 
     ret.steerActuatorDelay = 0.12  # Default delay, Prius has larger delay
     ret.steerLimitTimer = 0.4
+    ret.hasZss = 0x23 in fingerprint[0] # Detect whether car has accurate ZSS
 
     ret.stoppingControl = False # Toyota starts braking more when it thinks you want to stop
 
@@ -43,10 +44,10 @@ class CarInterface(CarInterfaceBase):
       ret.lateralTuning.indi.outerLoopGainBP = [0.]
       ret.lateralTuning.indi.outerLoopGainV = [3.0]
       ret.lateralTuning.indi.timeConstantBP = [0.]
-      ret.lateralTuning.indi.timeConstantV = [1.0]
+      ret.lateralTuning.indi.timeConstantV = [125/1100] if ret.hasZss else [1.0]
       ret.lateralTuning.indi.actuatorEffectivenessBP = [0.]
       ret.lateralTuning.indi.actuatorEffectivenessV = [1.0]
-      ret.steerActuatorDelay = 0.3
+      ret.steerActuatorDelay = 0.35  # sluggish steering with stock value of 0.3
 
     elif candidate in [CAR.RAV4, CAR.RAV4H]:
       stop_and_go = True if (candidate in CAR.RAV4H) else False
@@ -285,7 +286,7 @@ class CarInterface(CarInterfaceBase):
       ret.mass = 4305. * CV.LB_TO_KG + STD_CARGO_KG
       ret.lateralTuning.pid.kf = 0.00007818594
 
-    ret.steerRateCost = 1.
+    ret.steerRateCost = 0.5 if ret.hasZss else 1.0
     ret.centerToFront = ret.wheelbase * 0.44
 
     # TODO: get actual value, for now starting with reasonable value for
@@ -315,7 +316,12 @@ class CarInterface(CarInterfaceBase):
     # intercepting the DSU is a community feature since it requires unofficial hardware
     ret.communityFeature = ret.enableGasInterceptor or ret.enableDsu or smartDsu
 
-    if ret.enableGasInterceptor:
+    if candidate in [CAR.PRIUS] and ret.enableGasInterceptor:
+      ret.longitudinalTuning.kpBP = [0., 3., 3.5, 5., 35.]
+      ret.longitudinalTuning.kpV = [1.2, 0.96, 69/25, 2.4, 1.5]
+      ret.longitudinalTuning.kiBP = [0., 3., 3.5, 35.]
+      ret.longitudinalTuning.kiV = [0.18, 153/875, 261/500, 19/50]
+    elif candidate not in [CAR.PRIUS] and ret.enableGasInterceptor:
       ret.longitudinalTuning.kpBP = [0., 5., MIN_ACC_SPEED, MIN_ACC_SPEED + PEDAL_HYST_GAP, 35.]
       ret.longitudinalTuning.kpV = [1.2, 0.8, 0.765, 2.255, 1.5]
       ret.longitudinalTuning.kiBP = [0., MIN_ACC_SPEED, MIN_ACC_SPEED + PEDAL_HYST_GAP, 35.]
@@ -347,7 +353,19 @@ class CarInterface(CarInterfaceBase):
     self.cp.update_strings(can_strings)
     self.cp_cam.update_strings(can_strings)
 
+    self.init_cruise_speed = 0.
     ret = self.CS.update(self.cp, self.cp_cam)
+    self.cruise_speed_override = True # change this to False if you want to disable cruise speed override
+    if ret.cruiseState.enabled and ret.cruiseState.speed < 12 and self.CP.openpilotLongitudinalControl:
+      if self.cruise_speed_override:
+        if self.init_cruise_speed == 0.:
+          ret.cruiseState.speed = self.init_cruise_speed = 100/9
+        else:
+          ret.cruiseState.speed = self.init_cruise_speed
+      else:
+        ret.cruiseState.speed = 100/9
+    else:
+      self.init_cruise_speed = 0.
 
     ret.canValid = self.cp.can_valid and self.cp_cam.can_valid
     ret.steeringRateLimited = self.CC.steer_rate_limited if self.CC is not None else False

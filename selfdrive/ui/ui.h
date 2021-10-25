@@ -22,9 +22,13 @@
 #define COLOR_BLACK_ALPHA(x) nvgRGBA(0, 0, 0, x)
 #define COLOR_WHITE nvgRGBA(255, 255, 255, 255)
 #define COLOR_WHITE_ALPHA(x) nvgRGBA(255, 255, 255, x)
+#define COLOR_CYAN nvgRGBA(0, 161, 255, 233)
+#define COLOR_CYAN_ALPHA(x) nvgRGBA(0, 161, 233, x)
 #define COLOR_RED_ALPHA(x) nvgRGBA(201, 34, 49, x)
 #define COLOR_YELLOW nvgRGBA(218, 202, 37, 255)
 #define COLOR_RED nvgRGBA(201, 34, 49, 255)
+#define COLOR_PURPLE nvgRGBA(138, 43, 226, 255)
+#define COLOR_PURPLE_ALPHA(x) nvgRGBA(138, 43, 226, x)
 
 typedef cereal::CarControl::HUDControl::AudibleAlert AudibleAlert;
 
@@ -78,10 +82,10 @@ typedef enum UIStatus {
 } UIStatus;
 
 const QColor bg_colors [] = {
-  [STATUS_DISENGAGED] =  QColor(0x17, 0x33, 0x49, 0xc8),
-  [STATUS_ENGAGED] = QColor(0x17, 0x86, 0x44, 0xf1),
-  [STATUS_WARNING] = QColor(0xDA, 0x6F, 0x25, 0xf1),
-  [STATUS_ALERT] = QColor(0xC9, 0x22, 0x31, 0xf1),
+  [STATUS_DISENGAGED] =  QColor(0x0, 0x0, 0x0, 0xb4),
+  [STATUS_ENGAGED] = QColor(0x17, 0x86, 0x44, 0xb4),
+  [STATUS_WARNING] = QColor(0xDA, 0x6F, 0x25, 0xb4),
+  [STATUS_ALERT] = QColor(0xC9, 0x22, 0x31, 0xb4),
 };
 
 typedef struct {
@@ -98,6 +102,9 @@ typedef struct UIScene {
   mat3 view_from_calib;
   bool world_objects_visible;
 
+  bool headlightON;
+  bool parkingLightON;
+  bool meterDimmed;
   cereal::PandaState::PandaType pandaType;
 
   // modelV2
@@ -175,7 +182,6 @@ private:
   float accel_prev = 0;
   float gyro_prev = 0;
   float last_brightness = 0;
-  FirstOrderFilter brightness_filter;
 
   QTimer *timer;
 

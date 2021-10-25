@@ -39,6 +39,7 @@ def create_accel_command(packer, accel, pcm_cancel, standstill_req, lead, acc_ty
     "PERMIT_BRAKING": 1,
     "RELEASE_STANDSTILL": not standstill_req,
     "CANCEL_REQ": pcm_cancel,
+    "ALLOW_LONG_PRESS": 1,
   }
   return packer.make_can_msg("ACC_CONTROL", 0, values)
 
@@ -79,7 +80,7 @@ def create_ui_command(packer, steer, chime, left_line, right_line, left_lane_dep
     "SET_ME_X01": 1,
     "SET_ME_X01_2": 1,
     "REPEATED_BEEPS": 0,
-    "TWO_BEEPS": chime,
+    "TWO_BEEPS": steer,
     "LDA_ALERT": steer,
   }
   return packer.make_can_msg("LKAS_HUD", 0, values)

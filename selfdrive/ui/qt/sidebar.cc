@@ -51,12 +51,7 @@ void Sidebar::updateState(const UIState &s) {
   setProperty("netStrength", strength > 0 ? strength + 1 : 0);
 
   ItemStatus connectStatus;
-  auto last_ping = deviceState.getLastAthenaPingTime();
-  if (last_ping == 0) {
-    connectStatus = params.getBool("PrimeRedirected") ? ItemStatus{"NO\nPRIME", danger_color} : ItemStatus{"CONNECT\nOFFLINE", warning_color};
-  } else {
-    connectStatus = nanos_since_boot() - last_ping < 80e9 ? ItemStatus{"CONNECT\nONLINE", good_color} : ItemStatus{"CONNECT\nERROR", danger_color};
-  }
+  connectStatus = ItemStatus{"CONNECT\nDISABLED", good_color};
   setProperty("connectStatus", QVariant::fromValue(connectStatus));
 
   ItemStatus tempStatus = {"TEMP\nHIGH", danger_color};
@@ -70,7 +65,7 @@ void Sidebar::updateState(const UIState &s) {
 
   ItemStatus pandaStatus = {"VEHICLE\nONLINE", good_color};
   if (s.scene.pandaType == cereal::PandaState::PandaType::UNKNOWN) {
-    pandaStatus = {"NO\nPANDA", danger_color};
+    pandaStatus = {"VEHICLE\nOFFLINE", danger_color};
   } else if (s.scene.started && !sm["liveLocationKalman"].getLiveLocationKalman().getGpsOK()) {
     pandaStatus = {"GPS\nSEARCHING", warning_color};
   }
@@ -82,7 +77,7 @@ void Sidebar::paintEvent(QPaintEvent *event) {
   p.setPen(Qt::NoPen);
   p.setRenderHint(QPainter::Antialiasing);
 
-  p.fillRect(rect(), QColor(57, 57, 57));
+  p.fillRect(rect(), QColor(0, 0, 0));
 
   // static imgs
   p.setOpacity(0.65);
