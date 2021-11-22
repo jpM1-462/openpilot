@@ -252,12 +252,11 @@ EVENTS: Dict[int, Dict[str, Union[Alert, Callable[[Any, messaging.SubMaster, boo
   },
 
   EventName.startup: {
-    ET.PERMANENT: StartupAlert("Be ready to take over at any time")
+    ET.PERMANENT: StartupAlert("Be ready to take over at any time"),
   },
 
   EventName.startupMaster: {
-    ET.PERMANENT: StartupAlert("WARNING: This branch is not tested",
-                               alert_status=AlertStatus.userPrompt),
+    ET.PERMANENT: StartupAlert("Be ready to take over at any time"),
   },
 
   # Car is recognized, but marked as dashcam only
@@ -321,7 +320,7 @@ EVENTS: Dict[int, Dict[str, Union[Alert, Callable[[Any, messaging.SubMaster, boo
       "BRAKE!",
       "Risk of Collision",
       AlertStatus.critical, AlertSize.full,
-      Priority.HIGHEST, VisualAlert.fcw, AudibleAlert.chimeWarningRepeatInfinite, 2.),
+      Priority.HIGHEST, VisualAlert.fcw, AudibleAlert.chimeWarningRepeatInfinite, 0.),
   },
 
   EventName.ldw: {
@@ -339,7 +338,7 @@ EVENTS: Dict[int, Dict[str, Union[Alert, Callable[[Any, messaging.SubMaster, boo
       "openpilot will not brake while gas pressed",
       "",
       AlertStatus.normal, AlertSize.small,
-      Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .1, creation_delay=1.),
+      Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .0, creation_delay=1.),
   },
 
   # openpilot tries to learn certain parameters about your car by observing
@@ -360,7 +359,7 @@ EVENTS: Dict[int, Dict[str, Union[Alert, Callable[[Any, messaging.SubMaster, boo
       "Steering Temporarily Unavailable",
       "",
       AlertStatus.userPrompt, AlertSize.small,
-      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.chimePrompt, 1.),
+      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.chimePrompt, .1),
   },
 
   EventName.preDriverDistracted: {
@@ -392,7 +391,7 @@ EVENTS: Dict[int, Dict[str, Union[Alert, Callable[[Any, messaging.SubMaster, boo
       "TOUCH STEERING WHEEL: No Face Detected",
       "",
       AlertStatus.normal, AlertSize.small,
-      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.none, .1, alert_rate=0.75),
+      Priority.LOW, VisualAlert.none, AudibleAlert.none, .1, alert_rate=0.75),
   },
 
   EventName.promptDriverUnresponsive: {
@@ -436,7 +435,7 @@ EVENTS: Dict[int, Dict[str, Union[Alert, Callable[[Any, messaging.SubMaster, boo
       "Steer Left to Start Lane Change Once Safe",
       "",
       AlertStatus.normal, AlertSize.small,
-      Priority.LOW, VisualAlert.none, AudibleAlert.none, .1, alert_rate=0.75),
+      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.none, .1, alert_rate=0.75),
   },
 
   EventName.preLaneChangeRight: {
@@ -444,7 +443,7 @@ EVENTS: Dict[int, Dict[str, Union[Alert, Callable[[Any, messaging.SubMaster, boo
       "Steer Right to Start Lane Change Once Safe",
       "",
       AlertStatus.normal, AlertSize.small,
-      Priority.LOW, VisualAlert.none, AudibleAlert.none, .1, alert_rate=0.75),
+      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.none, .1, alert_rate=0.75),
   },
 
   EventName.laneChangeBlocked: {
@@ -538,8 +537,11 @@ EVENTS: Dict[int, Dict[str, Union[Alert, Callable[[Any, messaging.SubMaster, boo
   },
 
   EventName.steerTempUnavailable: {
-    ET.SOFT_DISABLE: SoftDisableAlert("Steering Temporarily Unavailable"),
-    ET.NO_ENTRY: NoEntryAlert("Steering Temporarily Unavailable"),
+    ET.WARNING: Alert(
+      "Steering Temporarily Unavailable",
+      "",
+      AlertStatus.userPrompt, AlertSize.small,
+      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.none, .1),
   },
 
   EventName.outOfSpace: {
@@ -580,7 +582,6 @@ EVENTS: Dict[int, Dict[str, Union[Alert, Callable[[Any, messaging.SubMaster, boo
   },
 
   EventName.wrongGear: {
-    ET.SOFT_DISABLE: SoftDisableAlert("Gear not D"),
     ET.NO_ENTRY: NoEntryAlert("Gear not D"),
   },
 
@@ -748,7 +749,7 @@ EVENTS: Dict[int, Dict[str, Union[Alert, Callable[[Any, messaging.SubMaster, boo
       "Reverse\nGear",
       "",
       AlertStatus.normal, AlertSize.full,
-      Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .2, creation_delay=0.5),
+      Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .2),
     ET.USER_DISABLE: ImmediateDisableAlert("Reverse Gear"),
     ET.NO_ENTRY: NoEntryAlert("Reverse Gear"),
   },

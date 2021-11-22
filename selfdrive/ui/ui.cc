@@ -54,6 +54,17 @@ static void update_leads(UIState *s, const cereal::RadarState::Reader &radar_sta
   }
 }
 
+static void update_radar_leads(UIState *s, const cereal::RadarState::Reader &radar_state, std::optional<cereal::ModelDataV2::XYZTData::Reader> line) {
+  for (int i = 0; i < 2; ++i) {
+    auto lead_data = (i == 0) ? radar_state.getLeadOne() : radar_state.getLeadTwo();
+    if (lead_data.getStatus()) {
+      float z = line ? (*line).getZ()[get_path_length_idx(*line, lead_data.getDRel())] : 0.0;
+      // negative because radarState uses left positive convention
+      calib_frame_to_full_frame(s, lead_data.getDRel(), -lead_data.getYRel(), z + 1.22, &s->scene.lead_vertices[i]);
+    }
+  }
+}
+
 static void update_line_data(const UIState *s, const cereal::ModelDataV2::XYZTData::Reader &line,
                              float y_off, float z_off, line_vertices_data *pvd, int max_idx) {
   const auto line_x = line.getX(), line_y = line.getY(), line_z = line.getZ();
@@ -116,6 +127,20 @@ static void update_state(UIState *s) {
     scene.engageable = cs.getEngageable() || cs.getEnabled();
     scene.dm_active = sm["driverMonitoringState"].getDriverMonitoringState().getIsActiveMode();
   }
+  s->scene.parkingLightON = sm["carState"].getCarState().getParkingLightON();
+  s->scene.headlightON = sm["carState"].getCarState().getHeadlightON();
+  s->scene.meterDimmed = sm["carState"].getCarState().getMeterDimmed();
+
+  // update radarState
+  if (sm.updated("radarState") && s->vg) {
+    std::optional<cereal::ModelDataV2::XYZTData::Reader> line;
+    if (sm.rcv_frame("modelV2") > 0) {
+      line = sm["modelV2"].getModelV2().getPosition();
+    }
+    update_radar_leads(s, sm["radarState"].getRadarState(), line);
+  }
+
+  // update modelV2
   if (sm.updated("modelV2") && s->vg) {
     update_model(s, sm["modelV2"].getModelV2());
   }
@@ -230,7 +255,7 @@ static void update_status(UIState *s) {
 QUIState::QUIState(QObject *parent) : QObject(parent) {
   ui_state.sm = std::make_unique<SubMaster, const std::initializer_list<const char *>>({
     "modelV2", "controlsState", "liveCalibration", "radarState", "deviceState", "roadCameraState",
-    "pandaStates", "carParams", "driverMonitoringState", "sensorEvents", "carState", "liveLocationKalman",
+    "pandaStates", "peripheralState", "carParams", "driverMonitoringState", "sensorEvents", "carState", "liveLocationKalman",
   });
 
   Params params;
@@ -259,7 +284,7 @@ void QUIState::update() {
   emit uiUpdate(ui_state);
 }
 
-Device::Device(QObject *parent) : brightness_filter(BACKLIGHT_OFFROAD, BACKLIGHT_TS, BACKLIGHT_DT), QObject(parent) {
+Device::Device(QObject *parent) : QObject(parent) {
 }
 
 void Device::update(const UIState &s) {
@@ -284,35 +309,20 @@ void Device::setAwake(bool on, bool reset) {
 }
 
 void Device::updateBrightness(const UIState &s) {
-  float clipped_brightness = BACKLIGHT_OFFROAD;
-  if (s.scene.started) {
-    // Scale to 0% to 100%
-    clipped_brightness = 100.0 * s.scene.light_sensor;
-
-    // CIE 1931 - https://www.photonstophotos.net/GeneralTopics/Exposure/Psychometric_Lightness_and_Gamma.htm
-    if (clipped_brightness <= 8) {
-      clipped_brightness = (clipped_brightness / 903.3);
-    } else {
-      clipped_brightness = std::pow((clipped_brightness + 16.0) / 116.0, 3.0);
-    }
-
-    // Scale back to 10% to 100%
-    clipped_brightness = std::clamp(100.0f * clipped_brightness, 10.0f, 100.0f);
-
-    // Limit brightness if running for too long
-    if (Hardware::TICI()) {
-      const float MAX_BRIGHTNESS_HOURS = 4;
-      const float HOURLY_BRIGHTNESS_DECREASE = 5;
-      float ui_running_hours = s.running_time / (60*60);
-      float anti_burnin_max_percent = std::clamp(100.0f - HOURLY_BRIGHTNESS_DECREASE * (ui_running_hours - MAX_BRIGHTNESS_HOURS),
-                                                 30.0f, 100.0f);
-      clipped_brightness = std::min(clipped_brightness, anti_burnin_max_percent);
-    }
+  int brightness = BACKLIGHT_OFFROAD;
+  if (!s.scene.started) {
+    brightness = BACKLIGHT_OFFROAD;
   }
 
-  int brightness = brightness_filter.update(clipped_brightness);
   if (!awake) {
     brightness = 0;
+  }
+  if ((s.scene.headlightON) && (s.scene.meterDimmed)) {
+    brightness = 10.0;
+  } else if ((s.scene.parkingLightON) && (!s.scene.headlightON) && (s.scene.meterDimmed)) {
+    brightness = 50.0;
+  } else {
+    brightness = 100.0;
   }
 
   if (brightness != last_brightness) {

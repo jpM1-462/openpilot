@@ -88,7 +88,7 @@ class LanePlanner:
     self.lane_width = self.lane_width_certainty.x * self.lane_width_estimate.x + \
                       (1 - self.lane_width_certainty.x) * speed_lane_width
 
-    clipped_lane_width = min(4.0, self.lane_width)
+    clipped_lane_width = min(3.5, self.lane_width)
     path_from_left_lane = self.lll_y + clipped_lane_width / 2.0
     path_from_right_lane = self.rll_y - clipped_lane_width / 2.0
 

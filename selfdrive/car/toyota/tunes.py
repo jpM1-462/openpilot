@@ -7,6 +7,7 @@ class LongTunes(Enum):
   PEDAL = 0
   TSS2 = 1
   TSS = 2
+  PEDAL_PRIUS = 4
 
 class LatTunes(Enum):
   INDI_PRIUS = 0
@@ -25,6 +26,7 @@ class LatTunes(Enum):
   PID_L = 13
   PID_M = 14
   PID_N = 15
+  INDI_PRIUS_ZSS = 16
 
 
 ###### LONG ######
@@ -36,6 +38,13 @@ def set_long_tune(tune, name):
     tune.kpV = [1.2, 0.8, 0.765, 2.255, 1.5]
     tune.kiBP = [0., MIN_ACC_SPEED, MIN_ACC_SPEED + PEDAL_HYST_GAP, 35.]
     tune.kiV = [0.18, 0.165, 0.489, 0.36]
+  elif name == LongTunes.PEDAL_PRIUS:
+    tune.deadzoneBP = [0.]
+    tune.deadzoneV = [0.]
+    tune.kpBP = [0., 3., 3.5, 5., 35.]
+    tune.kpV = [1.2, 0.96, 69/25, 2.4, 1.5]
+    tune.kiBP = [0., 3., 3.5, 35.]
+    tune.kiV = [0.18, 153/875, 261/500, 19/50]
   # Improved longitudinal tune
   elif name == LongTunes.TSS2:
     tune.deadzoneBP = [0., 8.05]
@@ -66,6 +75,17 @@ def set_lat_tune(tune, name):
     tune.indi.outerLoopGainV = [3.0]
     tune.indi.timeConstantBP = [0.]
     tune.indi.timeConstantV = [1.0]
+    tune.indi.actuatorEffectivenessBP = [0.]
+    tune.indi.actuatorEffectivenessV = [1.0]
+
+  elif name == LatTunes.INDI_PRIUS_ZSS:
+    tune.init('indi')
+    tune.indi.innerLoopGainBP = [0.]
+    tune.indi.innerLoopGainV = [4.0]
+    tune.indi.outerLoopGainBP = [0.]
+    tune.indi.outerLoopGainV = [3.0]
+    tune.indi.timeConstantBP = [0.]
+    tune.indi.timeConstantV = [0.1]
     tune.indi.actuatorEffectivenessBP = [0.]
     tune.indi.actuatorEffectivenessV = [1.0]
 

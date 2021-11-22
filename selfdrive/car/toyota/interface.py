@@ -23,13 +23,14 @@ class CarInterface(CarInterfaceBase):
 
     ret.steerActuatorDelay = 0.12  # Default delay, Prius has larger delay
     ret.steerLimitTimer = 0.4
+    ret.hasZss = 0x23 in fingerprint[0] # Detect whether car has accurate ZSS
 
     ret.stoppingControl = False  # Toyota starts braking more when it thinks you want to stop
 
     # Most cars use this default safety param
     ret.safetyConfigs[0].safetyParam = 73
 
-    if candidate == CAR.PRIUS:
+    if candidate == CAR.PRIUS and not ret.hasZss:
       ret.safetyConfigs[0].safetyParam = 66  # see conversion factor for STEER_TORQUE_EPS in dbc file
       stop_and_go = True
       ret.wheelbase = 2.70
@@ -39,6 +40,17 @@ class CarInterface(CarInterfaceBase):
 
       set_lat_tune(ret.lateralTuning, LatTunes.INDI_PRIUS)
       ret.steerActuatorDelay = 0.3
+
+    elif candidate == CAR.PRIUS and ret.hasZss:
+      ret.safetyConfigs[0].safetyParam = 66  # see conversion factor for STEER_TORQUE_EPS in dbc file
+      stop_and_go = True
+      ret.wheelbase = 2.70
+      ret.steerRatio = 15.74   # unknown end-to-end spec
+      tire_stiffness_factor = 0.6371   # hand-tune
+      ret.mass = 3045. * CV.LB_TO_KG + STD_CARGO_KG
+
+      set_lat_tune(ret.lateralTuning, LatTunes.INDI_PRIUS_ZSS)
+      ret.steerActuatorDelay = 0.33
 
     elif candidate in [CAR.RAV4, CAR.RAV4H]:
       stop_and_go = True if (candidate in CAR.RAV4H) else False
@@ -227,7 +239,7 @@ class CarInterface(CarInterfaceBase):
       ret.mass = 4305. * CV.LB_TO_KG + STD_CARGO_KG
       set_lat_tune(ret.lateralTuning, LatTunes.PID_J)
 
-    ret.steerRateCost = 1.
+    ret.steerRateCost = 0.5 if ret.hasZss else 1.0
     ret.centerToFront = ret.wheelbase * 0.44
 
     # TODO: get actual value, for now starting with reasonable value for
@@ -257,7 +269,9 @@ class CarInterface(CarInterfaceBase):
     # intercepting the DSU is a community feature since it requires unofficial hardware
     ret.communityFeature = ret.enableGasInterceptor or ret.enableDsu or smartDsu
 
-    if ret.enableGasInterceptor:
+    if ret.enableGasInterceptor and candidate == CAR.PRIUS:
+      set_long_tune(ret.longitudinalTuning, LongTunes.PEDAL_PRIUS)
+    elif ret.enableGasInterceptor and not candidate == CAR.PRIUS:
       set_long_tune(ret.longitudinalTuning, LongTunes.PEDAL)
     elif candidate in [CAR.COROLLA_TSS2, CAR.COROLLAH_TSS2, CAR.RAV4_TSS2, CAR.RAV4H_TSS2, CAR.LEXUS_NX_TSS2]:
       set_long_tune(ret.longitudinalTuning, LongTunes.TSS2)
@@ -274,7 +288,19 @@ class CarInterface(CarInterfaceBase):
     self.cp.update_strings(can_strings)
     self.cp_cam.update_strings(can_strings)
 
+    self.init_cruise_speed = 0.
     ret = self.CS.update(self.cp, self.cp_cam)
+    self.cruise_speed_override = True # change this to False if you want to disable cruise speed override
+    if ret.cruiseState.enabled and ret.cruiseState.speed < 12 and self.CP.openpilotLongitudinalControl:
+      if self.cruise_speed_override:
+        if self.init_cruise_speed == 0.:
+          ret.cruiseState.speed = self.init_cruise_speed = 100/9
+        else:
+          ret.cruiseState.speed = self.init_cruise_speed
+      else:
+        ret.cruiseState.speed = 100/9
+    else:
+      self.init_cruise_speed = 0.
 
     ret.canValid = self.cp.can_valid and self.cp_cam.can_valid
     ret.steeringRateLimited = self.CC.steer_rate_limited if self.CC is not None else False
