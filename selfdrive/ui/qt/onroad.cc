@@ -236,13 +236,13 @@ void OnroadHud::paintEvent(QPaintEvent *event) {
              engage_img, bg_colors[status], 1.0);
   }
 
-  // dm icon
-  if (!hideDM) {
-    drawIcon(p, radius / 2 + (bdr_s * 2), rect().bottom() - footer_h / 2,
+  // dm
+  drawIcon(p, radius / 2 + (bdr_s * 2), rect().bottom() - footer_h / 2,
              dm_img, QColor(0, 0, 0, 70), dmActive ? 1.0 : 0.2);
-    drawIcon(p, radius * 1.75 + (bdr_s * 2), rect().bottom() - footer_h / 2,
+
+  // brake
+  drawIcon(p, radius * 1.75 + (bdr_s * 2), rect().bottom() - footer_h / 2,
              brake_img, QColor(0, 0, 0, 70), brakeLights ? 1.0 : 0.2);
-  }
 }
 
 void OnroadHud::drawText(QPainter &p, int x, int y, const QString &text, int alpha) {
