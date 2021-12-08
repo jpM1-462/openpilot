@@ -71,6 +71,12 @@ TogglesPanel::TogglesPanel(SettingsWindow *parent) : ListWidget(parent) {
       "In this mode openpilot will ignore lanelines and just drive how it thinks a human would.",
       "../assets/offroad/icon_road.png",
     },
+    {
+      "CarBrightnessControl",
+      "\u2757 Toyota: Use Linked Brightness \u2757",
+      "Use the car's headlight state for brightness control. Toyota only at this time, please open a PR to commaai's opendbc GitHub repository if you want support for your brand.",
+      "../assets/offroad/icon_brightness.png",
+    },
 #ifdef ENABLE_MAPS
     {
       "NavSettingTime24h",

@@ -17,6 +17,7 @@ class OnroadHud : public QWidget {
   Q_PROPERTY(bool is_cruise_set MEMBER is_cruise_set NOTIFY valueChanged);
   Q_PROPERTY(bool engageable MEMBER engageable NOTIFY valueChanged);
   Q_PROPERTY(bool dmActive MEMBER dmActive NOTIFY valueChanged);
+  Q_PROPERTY(bool brakeLights MEMBER brakeLights NOTIFY valueChanged);
   Q_PROPERTY(bool hideDM MEMBER hideDM NOTIFY valueChanged);
   Q_PROPERTY(int status MEMBER status NOTIFY valueChanged);
 
@@ -31,6 +32,7 @@ private:
 
   QPixmap engage_img;
   QPixmap dm_img;
+  QPixmap brake_img;
   const int radius = 192;
   const int img_size = (radius / 2) * 1.5;
   QString speed;
@@ -39,6 +41,7 @@ private:
   bool is_cruise_set = false;
   bool engageable = false;
   bool dmActive = false;
+  bool brakeLights = false;
   bool hideDM = false;
   int status = STATUS_DISENGAGED;
 

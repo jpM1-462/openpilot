@@ -122,6 +122,7 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"IsDriverViewEnabled", CLEAR_ON_MANAGER_START},
     {"IsLdwEnabled", PERSISTENT},
     {"IsMetric", PERSISTENT},
+    {"CarBrightnessControl", PERSISTENT},
     {"IsOffroad", CLEAR_ON_MANAGER_START},
     {"IsOnroad", PERSISTENT},
     {"IsRHD", PERSISTENT},
