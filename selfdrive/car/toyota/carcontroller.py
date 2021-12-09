@@ -28,8 +28,8 @@ class CarController():
     # gas and brake
     if CS.CP.enableGasInterceptor and enabled:
       MAX_INTERCEPTOR_GAS = 0.5
-      # RAV4 has very sensitive has pedal
-      if CS.CP.carFingerprint in [CAR.RAV4, CAR.RAV4H, CAR.HIGHLANDER, CAR.HIGHLANDERH]:
+      # RAV4 has very sensitive gas pedal
+      if CS.CP.carFingerprint in [CAR.RAV4, CAR.RAV4H]:
         PEDAL_SCALE = interp(CS.out.vEgo, [0.0, MIN_ACC_SPEED, MIN_ACC_SPEED + PEDAL_TRANSITION], [0.15, 0.3, 0.0])
       elif CS.CP.carFingerprint in [CAR.COROLLA]:
         PEDAL_SCALE = interp(CS.out.vEgo, [0.0, MIN_ACC_SPEED, MIN_ACC_SPEED + PEDAL_TRANSITION], [0.3, 0.4, 0.0])
@@ -38,10 +38,20 @@ class CarController():
       # offset for creep and windbrake
       pedal_offset = interp(CS.out.vEgo, [0.0, 2.3, MIN_ACC_SPEED + PEDAL_TRANSITION], [-.4, 0.0, 0.2])
       pedal_command = PEDAL_SCALE * (actuators.accel + pedal_offset)
-      interceptor_gas_cmd = clip(pedal_command, 0., MAX_INTERCEPTOR_GAS)
+      # Prius, Kluger and most LSS Lexus have full speed ACC, but do not automatically resume
+      # Send pedal briefly if in standstill if openpilot wants to accelerate to resume ACC
+      # Pedal command is only sent very briefly, so no need to differentiate between Kluger and other cars
+      if CS.CP.carFingerprint in [CAR.PRIUS, CAR.HIGHLANDER, CAR.HIGHLANDERH, CAR.LEXUS_CTH, CAR.LEXUS_ESH, CAR.LEXUS_NX, CAR.LEXUS_NXH, CAR.LEXUS_RX, CAR.LEXUS_RXH]:
+        if (actuators.accel > 0.07) and CS.pcm_acc_status == 7:
+          interceptor_gas_cmd = 0.16
+        else:
+          interceptor_gas_cmd = 0
+      else:
+        interceptor_gas_cmd = clip(pedal_command, 0., MAX_INTERCEPTOR_GAS)
     else:
       interceptor_gas_cmd = 0.
-    pcm_accel_cmd = clip(actuators.accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX)
+    capped_accel = interp(CS.out.vEgo, [0, 25/3, 50/3], [CarControllerParams.ACCEL_MAX, 1.4, 0.5])
+    pcm_accel_cmd = clip(actuators.accel, CarControllerParams.ACCEL_MIN, capped_accel)
 
     # steer torque
     new_steer = int(round(actuators.steer * CarControllerParams.STEER_MAX))
@@ -72,6 +82,12 @@ class CarController():
 
     can_sends = []
 
+    # ui mesg is at 100Hz but we send asap if:
+    # - there is something to display
+    # - there is something to stop displaying
+    fcw_alert = hud_alert == VisualAlert.fcw
+    steer_alert = hud_alert in [VisualAlert.steerRequired, VisualAlert.ldw]
+
     #*** control msgs ***
     #print("steer {0} {1} {2} {3}".format(apply_steer, min_lim, max_lim, CS.steer_torque_motor)
 
@@ -95,7 +111,7 @@ class CarController():
       if pcm_cancel_cmd and CS.CP.carFingerprint in [CAR.LEXUS_IS, CAR.LEXUS_RC]:
         can_sends.append(create_acc_cancel_command(self.packer))
       elif CS.CP.openpilotLongitudinalControl:
-        can_sends.append(create_accel_command(self.packer, pcm_accel_cmd, pcm_cancel_cmd, self.standstill_req, lead, CS.acc_type))
+        can_sends.append(create_accel_command(self.packer, pcm_accel_cmd, pcm_cancel_cmd, self.standstill_req, lead, CS.acc_type, fcw_alert))
       else:
         can_sends.append(create_accel_command(self.packer, 0, pcm_cancel_cmd, False, lead, CS.acc_type))
 
@@ -103,12 +119,6 @@ class CarController():
       # send exactly zero if gas cmd is zero. Interceptor will send the max between read value and gas cmd.
       # This prevents unexpected pedal range rescaling
       can_sends.append(create_gas_interceptor_command(self.packer, interceptor_gas_cmd, frame // 2))
-
-    # ui mesg is at 100Hz but we send asap if:
-    # - there is something to display
-    # - there is something to stop displaying
-    fcw_alert = hud_alert == VisualAlert.fcw
-    steer_alert = hud_alert in [VisualAlert.steerRequired, VisualAlert.ldw]
 
     send_ui = False
     if ((fcw_alert or steer_alert) and not self.alert_active) or \

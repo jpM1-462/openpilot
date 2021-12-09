@@ -1,66 +1,54 @@
-#!/usr/bin/bash -e
+#!/usr/bin/env bash
+set -e
 
-# git diff --name-status origin/release3-staging | grep "^A" | less
+export GIT_COMMITTER_NAME="cydia2020"
+export GIT_COMMITTER_EMAIL="12470297+cydia2020@users.noreply.github.com"
+export GIT_AUTHOR_NAME="cydia2020"
+export GIT_AUTHOR_EMAIL="12470297+cydia2020@users.noreply.github.com"
 
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
+export GIT_SSH_COMMAND="ssh -i /data/gitkey"
 
-cd $DIR
+# set CLEAN to build outside of CI
+if [ ! -z "$CLEAN" ]; then
+  # Create folders
+  rm -rf /data/openpilot
+  mkdir -p /data/openpilot
+  cd /data/openpilot
 
-BUILD_DIR=/data/openpilot
-SOURCE_DIR="$(git rev-parse --show-toplevel)"
-
-if [ -f /TICI ]; then
-  FILES_SRC="release/files_tici"
-  RELEASE_BRANCH=release3-staging
-  DASHCAM_BRANCH=dashcam3-staging
-elif [ -f /EON ]; then
-  FILES_SRC="release/files_eon"
-  RELEASE_BRANCH=release2-staging
-  DASHCAM_BRANCH=dashcam-staging
+  # Create git repo
+  git init
+  git remote add origin git@github.com:cydia2020/dodgypilot.git
+  git fetch origin devel-staging
 else
-  exit 0
+  cd /data/openpilot
+  git clean -xdf
+  git branch -D release2-staging || true
 fi
 
-# set git identity
-source $DIR/identity.sh
+git fetch origin release2-staging
 
-echo "[-] Setting up repo T=$SECONDS"
-rm -rf $BUILD_DIR
-mkdir -p $BUILD_DIR
-cd $BUILD_DIR
-git init
-git remote add origin git@github.com:commaai/openpilot.git
-git fetch origin $RELEASE_BRANCH
-git checkout --orphan $RELEASE_BRANCH
-
-# do the files copy
-echo "[-] copying files T=$SECONDS"
-cd $SOURCE_DIR
-cp -pR --parents $(cat release/files_common) $BUILD_DIR/
-cp -pR --parents $(cat $FILES_SRC) $BUILD_DIR/
-
-# in the directory
-cd $BUILD_DIR
-
-rm -f panda/board/obj/panda.bin.signed
+# Create release2 with no history
+if [ ! -z "$CLEAN" ]; then
+  git checkout --orphan release2-staging origin/devel-staging
+else
+  git checkout --orphan release2-staging
+fi
 
 VERSION=$(cat selfdrive/common/version.h | awk -F[\"-]  '{print $2}')
 echo "#define COMMA_VERSION \"$VERSION-release\"" > selfdrive/common/version.h
 
-echo "[-] committing version $VERSION T=$SECONDS"
-git add -f .
-git commit -a -m "openpilot v$VERSION release"
-git branch --set-upstream-to=origin/$RELEASE_BRANCH
+git commit -m "dodgypilot v$VERSION"
 
-# Build panda firmware
+# Build signed panda firmware
 pushd panda/
-CERT=/data/pandaextra/certs/release RELEASE=1 scons -u .
+CERT=/data/openpilot/panda/certs/debug RELEASE=0 scons -u .
 mv board/obj/panda.bin.signed /tmp/panda.bin.signed
 popd
 
-# Build
-export PYTHONPATH="$BUILD_DIR"
-scons -j$(nproc)
+# Build stuff
+ln -sfn /data/openpilot /data/pythonpath
+export PYTHONPATH="/data/openpilot:/data/openpilot/pyextra"
+scons -j3
 
 # Ensure no submodules in release
 if test "$(git submodule--helper list | wc -l)" -gt "0"; then
@@ -95,24 +83,10 @@ touch prebuilt
 git add -f .
 git commit --amend -m "openpilot v$VERSION"
 
-# Run tests
-TEST_FILES="tools/"
-cd $SOURCE_DIR
-cp -pR -n --parents $TEST_FILES $BUILD_DIR/
-cd $BUILD_DIR
-RELEASE=1 selfdrive/test/test_onroad.py
-#selfdrive/manager/test/test_manager.py
-selfdrive/car/tests/test_car_interfaces.py
-rm -rf $TEST_FILES
+# Print committed files that are normally gitignored
+#git status --ignored
 
-if [ ! -z "$PUSH" ]; then
-  echo "[-] pushing T=$SECONDS"
-  git push -f origin $RELEASE_BRANCH
+git remote set-url origin git@github.com:cydia2020/dodgypilot.git
 
-  # Create dashcam
-  git rm selfdrive/car/*/carcontroller.py
-  git commit -m "create dashcam release from release"
-  git push -f origin $RELEASE_BRANCH:$DASHCAM_BRANCH
-fi
-
-echo "[-] done T=$SECONDS"
+# Push to release2-staging
+git push -f origin release2-staging
