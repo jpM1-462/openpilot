@@ -16,6 +16,8 @@ class CarInterface(CarInterfaceBase):
     ret.carName = "nissan"
     ret.safetyConfigs = [get_safety_config(car.CarParams.SafetyModel.nissan)]
 
+    ret.dashcamOnly = True
+
     ret.steerLimitAlert = False
     ret.steerRateCost = 0.5
 

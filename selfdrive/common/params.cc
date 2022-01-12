@@ -84,10 +84,13 @@ private:
 
 std::unordered_map<std::string, uint32_t> keys = {
     {"AccessToken", CLEAR_ON_MANAGER_START | DONT_LOG},
+    {"AllowGasPress", PERSISTENT},
+    {"AllowNonAdaptiveCruise", PERSISTENT},
     {"AthenadPid", PERSISTENT},
     {"AthenadUploadQueue", PERSISTENT},
     {"CalibrationParams", PERSISTENT},
     {"CarBatteryCapacity", PERSISTENT},
+    {"CarBrightnessControl", PERSISTENT},
     {"CarParams", CLEAR_ON_MANAGER_START | CLEAR_ON_PANDA_DISCONNECT | CLEAR_ON_IGNITION_ON},
     {"CarParamsCache", CLEAR_ON_MANAGER_START | CLEAR_ON_PANDA_DISCONNECT},
     {"CarVin", CLEAR_ON_MANAGER_START | CLEAR_ON_PANDA_DISCONNECT | CLEAR_ON_IGNITION_ON},
@@ -99,6 +102,7 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"DisableRadar_Allow", PERSISTENT},
     {"DisableRadar", PERSISTENT}, // WARNING: THIS DISABLES AEB
     {"DisableUpdates", PERSISTENT},
+    {"DisplayRadarInfo", PERSISTENT},
     {"DongleId", PERSISTENT},
     {"DoReboot", CLEAR_ON_MANAGER_START},
     {"DoShutdown", CLEAR_ON_MANAGER_START},
@@ -147,11 +151,13 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"RecordFrontLock", PERSISTENT},  // for the internal fleet
     {"ReleaseNotes", PERSISTENT},
     {"ShouldDoUpdate", CLEAR_ON_MANAGER_START},
+    {"SmartDSULongToggle", PERSISTENT},
     {"SnoozeUpdate", CLEAR_ON_MANAGER_START | CLEAR_ON_IGNITION_OFF},
     {"SshEnabled", PERSISTENT},
     {"SubscriberInfo", PERSISTENT},
     {"TermsVersion", PERSISTENT},
     {"Timezone", PERSISTENT},
+    {"ToyotaLongToggle_Allow", CLEAR_ON_IGNITION_ON},
     {"TrainingVersion", PERSISTENT},
     {"UpdateAvailable", CLEAR_ON_MANAGER_START},
     {"UpdateFailedCount", CLEAR_ON_MANAGER_START},

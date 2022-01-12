@@ -46,7 +46,7 @@ static int get_path_length_idx(const cereal::ModelDataV2::XYZTData::Reader &line
 
 static void update_leads(UIState *s, const cereal::RadarState::Reader &radar_state, const cereal::ModelDataV2::XYZTData::Reader &line) {
   for (int i = 0; i < 2; ++i) {
-    auto lead_data = (i == 0) ? radar_state.getLeadOne() : radar_state.getLeadTwo();
+    auto lead_data = radar_state.getLeadOne();
     if (lead_data.getStatus()) {
       float z = line.getZ()[get_path_length_idx(line, lead_data.getDRel())];
       calib_frame_to_full_frame(s, lead_data.getDRel(), -lead_data.getYRel(), z + 1.22, &s->scene.lead_vertices[i]);
@@ -108,6 +108,9 @@ static void update_sockets(UIState *s) {
 static void update_state(UIState *s) {
   SubMaster &sm = *(s->sm);
   UIScene &scene = s->scene;
+  s->scene.parkingLightON = sm["carState"].getCarState().getParkingLightON();
+  s->scene.headlightON = sm["carState"].getCarState().getHeadlightON();
+  s->scene.meterDimmed = sm["carState"].getCarState().getMeterDimmed();
 
   if (sm.updated("modelV2")) {
     update_model(s, sm["modelV2"].getModelV2());
@@ -184,6 +187,8 @@ static void update_state(UIState *s) {
 
 void ui_update_params(UIState *s) {
   s->scene.is_metric = Params().getBool("IsMetric");
+  s->scene.headlight_brightness_control = Params().getBool("CarBrightnessControl");
+  s->scene.enable_radar_state = Params().getBool("DisplayRadarInfo");
 }
 
 void UIState::updateStatus() {
@@ -270,31 +275,57 @@ void Device::resetInteractiveTimout() {
 }
 
 void Device::updateBrightness(const UIState &s) {
-  float clipped_brightness = BACKLIGHT_OFFROAD;
-  if (s.scene.started) {
-    // Scale to 0% to 100%
-    clipped_brightness = 100.0 * s.scene.light_sensor;
+  if (s.scene.headlight_brightness_control) {
+    int brightness = BACKLIGHT_OFFROAD;
 
-    // CIE 1931 - https://www.photonstophotos.net/GeneralTopics/Exposure/Psychometric_Lightness_and_Gamma.htm
-    if (clipped_brightness <= 8) {
-      clipped_brightness = (clipped_brightness / 903.3);
-    } else {
-      clipped_brightness = std::pow((clipped_brightness + 16.0) / 116.0, 3.0);
+    if (!s.scene.started) {
+      brightness = BACKLIGHT_OFFROAD;
     }
 
-    // Scale back to 10% to 100%
-    clipped_brightness = std::clamp(100.0f * clipped_brightness, 10.0f, 100.0f);
-  }
+    if (!awake) {
+      brightness = 0;
+    }
 
-  int brightness = brightness_filter.update(clipped_brightness);
-  if (!awake) {
-    brightness = 0;
-  }
+    if ((s.scene.headlightON) && (s.scene.meterDimmed)) {
+      brightness = 10.0;
+    } else if ((s.scene.parkingLightON) && (!s.scene.headlightON) && (s.scene.meterDimmed)) {
+      brightness = 50.0;
+    } else {
+      brightness = 100.0;
+    }
+    if (brightness != last_brightness) {
+      if (!brightness_future.isRunning()) {
+        brightness_future = QtConcurrent::run(Hardware::set_brightness, brightness);
+        last_brightness = brightness;
+      }
+    }
+  } else {
+    float clipped_brightness = BACKLIGHT_OFFROAD;
+    if (s.scene.started) {
+      // Scale to 0% to 100%
+      clipped_brightness = 100.0 * s.scene.light_sensor;
 
-  if (brightness != last_brightness) {
-    if (!brightness_future.isRunning()) {
-      brightness_future = QtConcurrent::run(Hardware::set_brightness, brightness);
-      last_brightness = brightness;
+      // CIE 1931 - https://www.photonstophotos.net/GeneralTopics/Exposure/Psychometric_Lightness_and_Gamma.htm
+      if (clipped_brightness <= 8) {
+        clipped_brightness = (clipped_brightness / 903.3);
+      } else {
+        clipped_brightness = std::pow((clipped_brightness + 16.0) / 116.0, 3.0);
+      }
+
+      // Scale back to 10% to 100%
+      clipped_brightness = std::clamp(100.0f * clipped_brightness, 10.0f, 100.0f);
+    }
+
+    int brightness = brightness_filter.update(clipped_brightness);
+    if (!awake) {
+      brightness = 0;
+    }
+
+    if (brightness != last_brightness) {
+      if (!brightness_future.isRunning()) {
+        brightness_future = QtConcurrent::run(Hardware::set_brightness, brightness);
+        last_brightness = brightness;
+      }
     }
   }
 }

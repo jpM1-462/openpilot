@@ -104,6 +104,70 @@ TogglesPanel::TogglesPanel(SettingsWindow *parent) : ListWidget(parent) {
   }
 }
 
+// dodgypilot's custom control panel
+DodgypilotPanel::DodgypilotPanel(SettingsWindow *parent) : ListWidget(parent) {
+  // param, title, desc, icon
+  std::vector<std::tuple<QString, QString, QString, QString>> toggles{
+    // allow accelerator depression
+    // this is universal, so no conditions required
+    {
+      "AllowGasPress",
+      "No Cancellation On Accelerator",
+      "Allow the driver to operate the accelerator pedal without cancelling openpilot.",
+      "../assets/offroad/icon_pedal.png",
+    },
+
+    // allow openpilot activation in 
+    // non-adaptive cruise control mode
+    {
+      "AllowNonAdaptiveCruise",
+      "Allow Normal Cruise Control",
+      "Allow steering wheel control in Non-Adaptive Cruise Control mode, to use this feature, hold the Cruise Control ON/OFF button for approximately 3 seconds.",
+      "../assets/offroad/icon_speed_limit.png",
+    },
+
+    // display radar lead readings
+    {
+      "DisplayRadarInfo",
+      "Display RADAR Information",
+      "Display RADAR interface information on the onroad HUD.",
+      "../assets/offroad/icon_radar.png",
+    },
+
+    // link car's dash brightness with your comma device
+    // should be universal on Toyota/Lexus vehicles
+    {
+      "CarBrightnessControl",
+      "Use Linked Brightness",
+      "Use the car's headlight state for brightness control.",
+      "../assets/offroad/icon_brightness.png",
+    },
+  };
+
+  Params params;
+
+  // use the toggled param itself as a condition to allow the toggle to be turned 
+  // off if the comma device does not exist in a SmartDSU vehicle anymore
+  if (params.getBool("ToyotaLongToggle_Allow") or params.getBool("SmartDSULongToggle")) {
+    toggles.push_back({
+      "SmartDSULongToggle",
+      "SmartDSU: Use Stock ACC",
+      "Use the vehicle's factory adaptive cruise control for acceleration and deceleration. Only available on TSS-P vehicles with SmartDSU.",
+      "../assets/offroad/icon_long_control.png",
+    });
+  }
+
+  for (auto &[param, title, desc, icon] : toggles) {
+    auto toggle = new ParamControl(param, title, desc, icon, this);
+    bool locked = params.getBool((param + "Lock").toStdString());
+    toggle->setEnabled(!locked);
+    if (!locked) {
+      connect(uiState(), &UIState::offroadTransition, toggle, &ParamControl::setEnabled);
+    }
+    addItem(toggle);
+  }
+}
+
 DevicePanel::DevicePanel(SettingsWindow *parent) : ListWidget(parent) {
   setSpacing(50);
   addItem(new LabelControl("Dongle ID", getDongleId().value_or("N/A")));
@@ -386,6 +450,7 @@ SettingsWindow::SettingsWindow(QWidget *parent) : QFrame(parent) {
     {"Device", device},
     {"Network", network_panel(this)},
     {"Toggles", new TogglesPanel(this)},
+    {"dodgypilot", new DodgypilotPanel(this)},
     {"Software", new SoftwarePanel(this)},
   };
 
@@ -395,7 +460,7 @@ SettingsWindow::SettingsWindow(QWidget *parent) : QFrame(parent) {
   QObject::connect(map_panel, &MapPanel::closeSettings, this, &SettingsWindow::closeSettings);
 #endif
 
-  const int padding = panels.size() > 3 ? 25 : 35;
+  const int padding = panels.size() > 3 ? 15 : 35;
 
   nav_btns = new QButtonGroup(this);
   for (auto &[name, panel] : panels) {
