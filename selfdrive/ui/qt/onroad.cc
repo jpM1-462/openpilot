@@ -373,8 +373,9 @@ void NvgWindow::drawLead(QPainter &painter, const UIScene &scene, const cereal::
 }
 
 void NvgWindow::drawMetricsDeviceState(QPainter &painter, uint fanrpm) {
+  int fan_rpm_int = (int)fan_rpm;
   // QStrings
-  QString fan_rpm = QString::number(fanrpm);
+  QString fan_rpm_int = QString::number(fanrpm);
 
   // device state
   QRect ds(bdr_s * 2, bdr_s * 1.5 + 228, 184, 490);
