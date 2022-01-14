@@ -233,7 +233,7 @@ void OnroadHud::paintEvent(QPaintEvent *event) {
   }
 
   // device state test
-  QRect ds(bdr_s * 2, bdr_s * 1.5 + 228, 184, 506);
+  QRect ds(bdr_s * 2, bdr_s * 1.5 + 228, 184, 490);
   p.setPen(QPen(QColor(0xff, 0xff, 0xff, 100), 10));
   p.setBrush(QColor(0, 0, 0, 100));
   p.drawRoundedRect(ds, 20, 20);
