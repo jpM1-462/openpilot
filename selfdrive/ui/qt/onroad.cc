@@ -245,14 +245,14 @@ void OnroadHud::paintEvent(QPaintEvent *event) {
   drawText(p, ds.center().x(), 410, "1.234", 255);
 
   configFont(p, "Open Sans", 30, "Regular");
-  drawText(p, ds.center().x(), 464, "TEST2", 100);
+  drawText(p, ds.center().x(), 480, "TEST2", 100);
   configFont(p, "Open Sans", 55, "Regular");
-  drawText(p, ds.center().x(), 538, "1.234", 255);
+  drawText(p, ds.center().x(), 554, "1.234", 255);
 
   configFont(p, "Open Sans", 30, "Regular");
-  drawText(p, ds.center().x(), 592, "TEST3", 100);
+  drawText(p, ds.center().x(), 524, "TEST3", 100);
   configFont(p, "Open Sans", 55, "Regular");
-  drawText(p, ds.center().x(), 666, "1.234", 255);
+  drawText(p, ds.center().x(), 698, "1.234", 255);
 
   // current speed
   configFont(p, "Open Sans", 176, "Bold");
