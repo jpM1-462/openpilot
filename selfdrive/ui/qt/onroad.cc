@@ -250,7 +250,7 @@ void OnroadHud::paintEvent(QPaintEvent *event) {
   drawText(p, ds.center().x(), 554, "1.234", 255);
 
   configFont(p, "Open Sans", 30, "Regular");
-  drawText(p, ds.center().x(), 524, "TEST3", 100);
+  drawText(p, ds.center().x(), 624, "TEST3", 100);
   configFont(p, "Open Sans", 55, "Regular");
   drawText(p, ds.center().x(), 698, "1.234", 255);
 
