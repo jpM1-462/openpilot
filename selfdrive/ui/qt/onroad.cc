@@ -239,17 +239,17 @@ void OnroadHud::paintEvent(QPaintEvent *event) {
   p.drawRoundedRect(ds, 20, 20);
   p.setPen(Qt::NoPen);
 
-  configFont(p, "Open Sans", 30, "Regular");
+  configFont(p, "Open Sans", 33, "Regular");
   drawText(p, ds.center().x(), 336, "TEST", 100);
   configFont(p, "Open Sans", 55, "Regular");
   drawText(p, ds.center().x(), 410, "1.234", 255);
 
-  configFont(p, "Open Sans", 30, "Regular");
+  configFont(p, "Open Sans", 33, "Regular");
   drawText(p, ds.center().x(), 482, "TEST2", 100);
   configFont(p, "Open Sans", 55, "Regular");
   drawText(p, ds.center().x(), 556, "1.234", 255);
 
-  configFont(p, "Open Sans", 30, "Regular");
+  configFont(p, "Open Sans", 33, "Regular");
   drawText(p, ds.center().x(), 628, "TEST3", 100);
   configFont(p, "Open Sans", 55, "Regular");
   drawText(p, ds.center().x(), 702, "1.234", 255);
