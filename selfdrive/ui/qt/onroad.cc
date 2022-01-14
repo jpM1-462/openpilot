@@ -384,19 +384,19 @@ void NvgWindow::drawMetricsDeviceState(QPainter &painter, uint fanrpm) {
   painter.setPen(Qt::NoPen);
 
   configFont(painter, "Open Sans", 33, "Regular");
-  painter.drawText(ds.center().x(), 338, "FAN RPM", 100);
+  painter.drawText(ds.center().x(), 338, "FAN RPM");
   configFont(painter, "Open Sans", 55, "Regular");
-  painter.drawText(ds.center().x(), 412, fanrpm, 255);
+  painter.drawText(ds.center().x(), 412, fanrpm);
 
   configFont(painter, "Open Sans", 33, "Regular");
-  painter.drawText(ds.center().x(), 484, "TEST2", 100);
+  painter.drawText(ds.center().x(), 484, "TEST2");
   configFont(painter, "Open Sans", 55, "Regular");
-  painter.drawText(ds.center().x(), 558, "1.234", 255);
+  painter.drawText(ds.center().x(), 558, "1.234");
 
   configFont(painter, "Open Sans", 33, "Regular");
-  painter.drawText(ds.center().x(), 630, "TEST3", 100);
+  painter.drawText(ds.center().x(), 630, "TEST3");
   configFont(painter, "Open Sans", 55, "Regular");
-  painter.drawText(ds.center().x(), 704, "1.234", 255);
+  painter.drawText(ds.center().x(), 704, "1.234");
 }
 
 void NvgWindow::paintGL() {
