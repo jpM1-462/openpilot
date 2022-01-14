@@ -183,11 +183,12 @@ void OnroadHud::updateState(const UIState &s) {
   }
   QString maxspeed_str = cruise_set ? QString::number(std::nearbyint(maxspeed)) : "N/A";
   float cur_speed = std::max(0.0, sm["carState"].getCarState().getVEgo() * (s.scene.is_metric ? MS_TO_KPH : MS_TO_MPH));
+  QString fanspeed_str = QString::number(sm["peripheralState"].getPeripheralState().getFanSpeedRpm());
 
   setProperty("is_cruise_set", cruise_set);
   setProperty("speed", QString::number(std::nearbyint(cur_speed)));
   setProperty("maxSpeed", maxspeed_str);
-  setProperty("fanSpeedRpm", QString::number(sm["peripheralState"].getPeripheralState().getFanSpeedRpm()));
+  setProperty("fanSpeedRpm", fanspeed_str);
   setProperty("speedUnit", s.scene.is_metric ? "km/h" : "mph");
   setProperty("hideDM", cs.getAlertSize() != cereal::ControlsState::AlertSize::NONE);
   setProperty("status", s.status);
