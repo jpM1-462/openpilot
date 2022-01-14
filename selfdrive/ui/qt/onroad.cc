@@ -373,9 +373,9 @@ void NvgWindow::drawLead(QPainter &painter, const UIScene &scene, const cereal::
 }
 
 void NvgWindow::drawMetricsDeviceState(QPainter &painter, uint fanrpm) {
-  int fan_rpm_int = (int)fan_rpm;
+  int fan_rpm_int = (int)fanrpm;
   // QStrings
-  QString fan_rpm_int = QString::number(fanrpm);
+  QString fan_rpm_str = QString::number(fan_rpm_int);
 
   // device state
   QRect ds(bdr_s * 2, bdr_s * 1.5 + 228, 184, 490);
@@ -387,7 +387,7 @@ void NvgWindow::drawMetricsDeviceState(QPainter &painter, uint fanrpm) {
   configFont(painter, "Open Sans", 33, "Regular");
   painter.drawText(ds.center().x(), 338, "FAN RPM");
   configFont(painter, "Open Sans", 55, "Regular");
-  painter.drawText(ds.center().x(), 412, fanrpm);
+  painter.drawText(ds.center().x(), 412, fan_rpm_str);
 
   configFont(painter, "Open Sans", 33, "Regular");
   painter.drawText(ds.center().x(), 484, "TEST2");
