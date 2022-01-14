@@ -240,14 +240,24 @@ void OnroadHud::paintEvent(QPaintEvent *event) {
   p.setPen(Qt::NoPen);
 
   configFont(p, "Open Sans", 30, "Regular");
-  drawText(p, ds.center().x(), 337, "TEST", 100);
+  drawText(p, ds.center().x(), 336, "TEST", 100);
   configFont(p, "Open Sans", 55, "Regular");
-  drawText(p, ds.center().x(), 428, "1.234", 255);
+  drawText(p, ds.center().x(), 418, "1.234", 255);
+
+  configFont(p, "Open Sans", 30, "Regular");
+  drawText(p, ds.center().x(), 464, "TEST2", 100);
+  configFont(p, "Open Sans", 55, "Regular");
+  drawText(p, ds.center().x(), 546, "1.234", 255);
+
+  configFont(p, "Open Sans", 30, "Regular");
+  drawText(p, ds.center().x(), 336, "TEST3", 100);
+  configFont(p, "Open Sans", 55, "Regular");
+  drawText(p, ds.center().x(), 418, "1.234", 255);
 
   // current speed
-  configFont(p, "Open Sans", 176, "Bold");
+  configFont(p, "Open Sans", 592, "Bold");
   drawText(p, rect().center().x(), 210, speed);
-  configFont(p, "Open Sans", 66, "Regular");
+  configFont(p, "Open Sans", 674, "Regular");
   drawText(p, rect().center().x(), 290, speedUnit, 200);
 
   // engage-ability icon
