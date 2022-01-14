@@ -187,6 +187,7 @@ void OnroadHud::updateState(const UIState &s) {
   setProperty("is_cruise_set", cruise_set);
   setProperty("speed", QString::number(std::nearbyint(cur_speed)));
   setProperty("maxSpeed", maxspeed_str);
+  setProperty("fanSpeedRpm", QString::number(sm["peripheralState"].getPeripheralState().getFanSpeedRpm()));
   setProperty("speedUnit", s.scene.is_metric ? "km/h" : "mph");
   setProperty("hideDM", cs.getAlertSize() != cereal::ControlsState::AlertSize::NONE);
   setProperty("status", s.status);
