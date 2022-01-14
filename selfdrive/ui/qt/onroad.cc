@@ -183,7 +183,6 @@ void OnroadHud::updateState(const UIState &s) {
   }
   QString maxspeed_str = cruise_set ? QString::number(std::nearbyint(maxspeed)) : "N/A";
   float cur_speed = std::max(0.0, sm["carState"].getCarState().getVEgo() * (s.scene.is_metric ? MS_TO_KPH : MS_TO_MPH));
-  QString fanspeed_str = QString::number(fanspeed);
 
   setProperty("is_cruise_set", cruise_set);
   setProperty("speed", QString::number(std::nearbyint(cur_speed)));
@@ -385,20 +384,19 @@ void NvgWindow::drawMetricsDeviceState(QPainter &painter, uint fanrpm) {
   painter.setPen(Qt::NoPen);
 
   configFont(painter, "Open Sans", 33, "Regular");
-  drawText(painter, ds.center().x(), 338, "FAN RPM", 100);
+  painter.drawText(ds.center().x(), 338, "FAN RPM", 100);
   configFont(painter, "Open Sans", 55, "Regular");
-  drawText(painter, ds.center().x(), 412, fanrpm, 255);
+  painter.drawText(ds.center().x(), 412, fanrpm, 255);
 
   configFont(painter, "Open Sans", 33, "Regular");
-  drawText(painter, ds.center().x(), 484, "TEST2", 100);
+  painter.drawText(ds.center().x(), 484, "TEST2", 100);
   configFont(painter, "Open Sans", 55, "Regular");
-  drawText(painter, ds.center().x(), 558, "1.234", 255);
+  painter.drawText(ds.center().x(), 558, "1.234", 255);
 
   configFont(painter, "Open Sans", 33, "Regular");
-  drawText(painter, ds.center().x(), 630, "TEST3", 100);
+  painter.drawText(ds.center().x(), 630, "TEST3", 100);
   configFont(painter, "Open Sans", 55, "Regular");
-  drawText(painter, ds.center().x(), 704, "1.234", 255);
-
+  painter.drawText(ds.center().x(), 704, "1.234", 255);
 }
 
 void NvgWindow::paintGL() {
