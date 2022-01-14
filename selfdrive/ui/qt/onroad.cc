@@ -183,13 +183,11 @@ void OnroadHud::updateState(const UIState &s) {
   }
   QString maxspeed_str = cruise_set ? QString::number(std::nearbyint(maxspeed)) : "N/A";
   float cur_speed = std::max(0.0, sm["carState"].getCarState().getVEgo() * (s.scene.is_metric ? MS_TO_KPH : MS_TO_MPH));
-  int fanspeed = sm["peripheralState"].getPeripheralState().getFanSpeedRpm();
   QString fanspeed_str = QString::number(fanspeed);
 
   setProperty("is_cruise_set", cruise_set);
   setProperty("speed", QString::number(std::nearbyint(cur_speed)));
   setProperty("maxSpeed", maxspeed_str);
-  setProperty("fanSpeedRpm", fanspeed_str);
   setProperty("speedUnit", s.scene.is_metric ? "km/h" : "mph");
   setProperty("hideDM", cs.getAlertSize() != cereal::ControlsState::AlertSize::NONE);
   setProperty("status", s.status);
@@ -234,30 +232,6 @@ void OnroadHud::paintEvent(QPaintEvent *event) {
     configFont(p, "Open Sans", 80, "SemiBold");
     drawText(p, rc.center().x(), 212, maxSpeed, 100);
   }
-
-/*
-  // device state test
-  QRect ds(bdr_s * 2, bdr_s * 1.5 + 228, 184, 490);
-  p.setPen(QPen(QColor(0xff, 0xff, 0xff, 100), 10));
-  p.setBrush(QColor(0, 0, 0, 100));
-  p.drawRoundedRect(ds, 20, 20);
-  p.setPen(Qt::NoPen);
-
-  configFont(p, "Open Sans", 33, "Regular");
-  drawText(p, ds.center().x(), 338, "TEST", 100);
-  configFont(p, "Open Sans", 55, "Regular");
-  drawText(p, ds.center().x(), 412, "1.234", 255);
-
-  configFont(p, "Open Sans", 33, "Regular");
-  drawText(p, ds.center().x(), 484, "TEST2", 100);
-  configFont(p, "Open Sans", 55, "Regular");
-  drawText(p, ds.center().x(), 558, "1.234", 255);
-
-  configFont(p, "Open Sans", 33, "Regular");
-  drawText(p, ds.center().x(), 630, "TEST3", 100);
-  configFont(p, "Open Sans", 55, "Regular");
-  drawText(p, ds.center().x(), 704, "1.234", 255);
-*/
 
   // current speed
   configFont(p, "Open Sans", 176, "Bold");
@@ -399,6 +373,34 @@ void NvgWindow::drawLead(QPainter &painter, const UIScene &scene, const cereal::
   }
 }
 
+void NvgWindow::drawMetricsDeviceState(QPainter &painter, uint fanrpm) {
+  // QStrings
+  QString fan_rpm = QString::number(fanrpm);
+
+  // device state
+  QRect ds(bdr_s * 2, bdr_s * 1.5 + 228, 184, 490);
+  painter.setPen(QPen(QColor(0xff, 0xff, 0xff, 100), 10));
+  painter.setBrush(QColor(0, 0, 0, 100));
+  painter.drawRoundedRect(ds, 20, 20);
+  painter.setPen(Qt::NoPen);
+
+  configFont(painter, "Open Sans", 33, "Regular");
+  drawText(painter, ds.center().x(), 338, "FAN RPM", 100);
+  configFont(painter, "Open Sans", 55, "Regular");
+  drawText(painter, ds.center().x(), 412, fanrpm, 255);
+
+  configFont(painter, "Open Sans", 33, "Regular");
+  drawText(painter, ds.center().x(), 484, "TEST2", 100);
+  configFont(painter, "Open Sans", 55, "Regular");
+  drawText(painter, ds.center().x(), 558, "1.234", 255);
+
+  configFont(painter, "Open Sans", 33, "Regular");
+  drawText(painter, ds.center().x(), 630, "TEST3", 100);
+  configFont(painter, "Open Sans", 55, "Regular");
+  drawText(painter, ds.center().x(), 704, "1.234", 255);
+
+}
+
 void NvgWindow::paintGL() {
   CameraViewWidget::paintGL();
 
@@ -417,6 +419,10 @@ void NvgWindow::paintGL() {
       if (leads[0].getProb() > .5) {
         drawLead(painter, s->scene, leads[0], radar_lead_one, s->scene.lead_vertices[0], vego);
       }
+    }
+    if (true) {
+      uint fanrpm = (*s->sm)["peripheralState"].getPeripheralState().getFanSpeedRpm();
+      drawMetricsDeviceState(painter, fanrpm);
     }
   }
 
