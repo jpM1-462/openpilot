@@ -232,6 +232,7 @@ void OnroadHud::paintEvent(QPaintEvent *event) {
     drawText(p, rc.center().x(), 212, maxSpeed, 100);
   }
 
+/*
   // device state test
   QRect ds(bdr_s * 2, bdr_s * 1.5 + 228, 184, 490);
   p.setPen(QPen(QColor(0xff, 0xff, 0xff, 100), 10));
@@ -253,6 +254,7 @@ void OnroadHud::paintEvent(QPaintEvent *event) {
   drawText(p, ds.center().x(), 630, "TEST3", 100);
   configFont(p, "Open Sans", 55, "Regular");
   drawText(p, ds.center().x(), 704, "1.234", 255);
+*/
 
   // current speed
   configFont(p, "Open Sans", 176, "Bold");
