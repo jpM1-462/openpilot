@@ -195,6 +195,13 @@ struct CarState {
   leftBlindspot @33 :Bool; # Is there something blocking the left lane change
   rightBlindspot @34 :Bool; # Is there something blocking the right lane change
 
+  headlightON @39 :Bool; # Low Beam ON
+  meterDimmed @40 :Bool; # MFD Dimmer ON
+  engineRPM @41 :Float32; # Engine RPM
+  parkingLightON @42 :Bool; # Parking Light ON
+  pcmStandstill @43 :Bool; # PCM State is 7
+  meterLowBrightness @44 :Bool; # MFD Low Brightness Mode ON
+
   struct WheelSpeeds {
     # optional wheel speeds
     fl @0 :Float32;
@@ -247,7 +254,7 @@ struct CarState {
   }
 
   errorsDEPRECATED @0 :List(CarEvent.EventName);
-  brakeLightsDEPRECATED @19 :Bool;
+  brakeLights @19 :Bool;
 }
 
 # ******* radar state @ 20hz *******
@@ -393,6 +400,7 @@ struct CarParams {
   enableApgs @6 :Bool;       # advanced parking guidance system
   enableBsm @56 :Bool;       # blind spot monitoring
   flags @64 :UInt32;         # flags for car specific quirks
+  hasZss @66 :Bool;          # true if ZSS is detected
 
   minEnableSpeed @7 :Float32;
   minSteerSpeed @8 :Float32;

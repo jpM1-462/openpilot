@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from cereal import car
+from common.params import Params
 from selfdrive.config import Conversions as CV
 from selfdrive.car.toyota.tunes import LatTunes, LongTunes, set_long_tune, set_lat_tune
 from selfdrive.car.toyota.values import Ecu, CAR, ToyotaFlags, TSS2_CAR, NO_DSU_CAR, MIN_ACC_SPEED, EPS_SCALE, CarControllerParams
@@ -24,11 +25,12 @@ class CarInterface(CarInterfaceBase):
 
     ret.steerActuatorDelay = 0.12  # Default delay, Prius has larger delay
     ret.steerLimitTimer = 0.4
+    ret.hasZss = 0x23 in fingerprint[0] # Detect whether car has accurate ZSS
     ret.stoppingControl = False  # Toyota starts braking more when it thinks you want to stop
 
     stop_and_go = False
 
-    if candidate == CAR.PRIUS:
+    if candidate == CAR.PRIUS and not ret.hasZss:
       stop_and_go = True
       ret.wheelbase = 2.70
       ret.steerRatio = 15.74   # unknown end-to-end spec
@@ -36,7 +38,17 @@ class CarInterface(CarInterfaceBase):
       ret.mass = 3045. * CV.LB_TO_KG + STD_CARGO_KG
 
       set_lat_tune(ret.lateralTuning, LatTunes.INDI_PRIUS)
-      ret.steerActuatorDelay = 0.3
+      ret.steerActuatorDelay = 0.35
+
+    elif candidate == CAR.PRIUS and ret.hasZss:
+      stop_and_go = True
+      ret.wheelbase = 2.70
+      ret.steerRatio = 15.74   # unknown end-to-end spec
+      tire_stiffness_factor = 0.6371   # hand-tune
+      ret.mass = 3045. * CV.LB_TO_KG + STD_CARGO_KG
+
+      set_lat_tune(ret.lateralTuning, LatTunes.INDI_PRIUS_ZSS)
+      ret.steerActuatorDelay = 0.35
 
     elif candidate == CAR.PRIUS_V:
       stop_and_go = True
@@ -195,7 +207,7 @@ class CarInterface(CarInterfaceBase):
       ret.mass = 4305. * CV.LB_TO_KG + STD_CARGO_KG
       set_lat_tune(ret.lateralTuning, LatTunes.PID_J)
 
-    ret.steerRateCost = 1.
+    ret.steerRateCost = 0.5 if ret.hasZss else 1.0
     ret.centerToFront = ret.wheelbase * 0.44
 
     # TODO: get actual value, for now starting with reasonable value for
@@ -207,15 +219,18 @@ class CarInterface(CarInterfaceBase):
     ret.tireStiffnessFront, ret.tireStiffnessRear = scale_tire_stiffness(ret.mass, ret.wheelbase, ret.centerToFront,
                                                                          tire_stiffness_factor=tire_stiffness_factor)
 
+    params = Params()
     ret.enableBsm = 0x3F6 in fingerprint[0] and candidate in TSS2_CAR
     # Detect smartDSU, which intercepts ACC_CMD from the DSU allowing openpilot to send it
     smartDsu = 0x2FF in fingerprint[0]
+    if smartDsu:
+      params.put_bool("ToyotaLongToggle_Allow", True)
     # In TSS2 cars the camera does long control
     found_ecus = [fw.ecu for fw in car_fw]
     ret.enableDsu = (len(found_ecus) > 0) and (Ecu.dsu not in found_ecus) and (candidate not in NO_DSU_CAR) and (not smartDsu)
     ret.enableGasInterceptor = 0x201 in fingerprint[0]
     # if the smartDSU is detected, openpilot can send ACC_CMD (and the smartDSU will block it from the DSU) or not (the DSU is "connected")
-    ret.openpilotLongitudinalControl = smartDsu or ret.enableDsu or candidate in TSS2_CAR
+    ret.openpilotLongitudinalControl = (smartDsu or ret.enableDsu or candidate in TSS2_CAR) and not Params().get_bool("SmartDSULongToggle")
 
     if 0x245 in fingerprint[0]:
       ret.flags |= ToyotaFlags.HYBRID.value
@@ -226,6 +241,12 @@ class CarInterface(CarInterfaceBase):
 
     if ret.enableGasInterceptor:
       set_long_tune(ret.longitudinalTuning, LongTunes.PEDAL)
+      # these cars have full speed DRCC, use stock tune
+      if candidate in [CAR.PRIUS, CAR.HIGHLANDER, CAR.HIGHLANDERH, CAR.LEXUS_CTH, CAR.LEXUS_ESH,
+                       CAR.LEXUS_NX, CAR.LEXUS_NXH, CAR.LEXUS_RX, CAR.LEXUS_RXH]:
+        set_long_tune(ret.longitudinalTuning, LongTunes.TSS)
+      else:
+        set_long_tune(ret.longitudinalTuning, LongTunes.PEDAL)
     elif candidate in TSS2_CAR:
       set_long_tune(ret.longitudinalTuning, LongTunes.TSS2)
       ret.stoppingDecelRate = 0.3  # reach stopping target smoothly
@@ -240,7 +261,19 @@ class CarInterface(CarInterfaceBase):
     self.cp.update_strings(can_strings)
     self.cp_cam.update_strings(can_strings)
 
+    self.init_cruise_speed = 0.
     ret = self.CS.update(self.cp, self.cp_cam)
+    self.cruise_speed_override = True # change this to False if you want to disable cruise speed override
+    if ret.cruiseState.enabled and ret.cruiseState.speed < 12 and self.CP.openpilotLongitudinalControl:
+      if self.cruise_speed_override:
+        if self.init_cruise_speed == 0.:
+          ret.cruiseState.speed = self.init_cruise_speed = 100/9
+        else:
+          ret.cruiseState.speed = self.init_cruise_speed
+      else:
+        ret.cruiseState.speed = 100/9
+    else:
+      self.init_cruise_speed = 0.
 
     ret.canValid = self.cp.can_valid and self.cp_cam.can_valid
     ret.steeringRateLimited = self.CC.steer_rate_limited if self.CC is not None else False

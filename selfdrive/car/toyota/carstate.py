@@ -1,7 +1,5 @@
 from cereal import car
 from common.numpy_fast import mean
-from common.filter_simple import FirstOrderFilter
-from common.realtime import DT_CTRL
 from opendbc.can.can_define import CANDefine
 from selfdrive.car.interfaces import CarStateBase
 from opendbc.can.parser import CANParser
@@ -16,12 +14,26 @@ class CarState(CarStateBase):
     self.shifter_values = can_define.dv["GEAR_PACKET"]["GEAR"]
     self.eps_torque_scale = EPS_SCALE[CP.carFingerprint] / 100.
 
+    # All TSS2 car have the accurate sensor
+    self.accurate_steer_angle_seen = CP.carFingerprint in TSS2_CAR
     # On cars with cp.vl["STEER_TORQUE_SENSOR"]["STEER_ANGLE"]
     # the signal is zeroed to where the steering angle is at start.
     # Need to apply an offset as soon as the steering angle measurements are both received
-    self.needs_angle_offset = True
-    self.accurate_steer_angle_seen = False
-    self.angle_offset = FirstOrderFilter(None, 60.0, DT_CTRL, initialized=False)
+    # TSS 2 offset logic
+    self.needs_angle_offset_torque = CP.carFingerprint not in TSS2_CAR
+    # ZSS always needs offset
+    self.needs_angle_offset_zss = True
+    self.angle_offset_zss = 0.
+    self.angle_offset_torque = 0.
+    self.stock_steer_value = 0.
+    self.zorro_steer_value = 0.
+    self.torque_steer_value = 0.
+    self.cruise_active_previous = False
+    self.cruise_active = False
+    self.out_of_tolerance_counter = 0
+    # for debug purposes. 0-undefined, 1-stock, 2-torque, 3-zorro
+    self.steertype = 0
+    self.count = 0
 
     self.low_speed_lockout = False
     self.acc_type = 1
@@ -35,6 +47,7 @@ class CarState(CarStateBase):
 
     ret.brakePressed = cp.vl["BRAKE_MODULE"]["BRAKE_PRESSED"] != 0
     ret.brakeHoldActive = cp.vl["ESP_CONTROL"]["BRAKE_HOLD_ACTIVE"] == 1
+    ret.brakeLights = bool(cp.vl["ESP_CONTROL"]['BRAKE_LIGHTS_ACC'] or cp.vl["BRAKE_MODULE"]["BRAKE_PRESSED"] != 0)
     if self.CP.enableGasInterceptor:
       ret.gas = (cp.vl["GAS_SENSOR"]["INTERCEPTOR_GAS"] + cp.vl["GAS_SENSOR"]["INTERCEPTOR_GAS2"]) / 2.
       ret.gasPressed = ret.gas > 15
@@ -55,21 +68,57 @@ class CarState(CarStateBase):
 
     ret.standstill = ret.vEgoRaw < 0.001
 
-    ret.steeringAngleDeg = cp.vl["STEER_ANGLE_SENSOR"]["STEER_ANGLE"] + cp.vl["STEER_ANGLE_SENSOR"]["STEER_FRACTION"]
-    torque_sensor_angle_deg = cp.vl["STEER_TORQUE_SENSOR"]["STEER_ANGLE"]
 
+    self.cruise_active = bool(cp.vl["PCM_CRUISE"]["CRUISE_ACTIVE"])
+    self.stock_steer_value = cp.vl["STEER_ANGLE_SENSOR"]["STEER_ANGLE"] + cp.vl["STEER_ANGLE_SENSOR"]["STEER_FRACTION"]
     # Some newer models have a more accurate angle measurement in the TORQUE_SENSOR message. Use if non-zero
-    if abs(torque_sensor_angle_deg) > 1e-3:
+    if abs(cp.vl["STEER_TORQUE_SENSOR"]["STEER_ANGLE"]) > 1e-3:
       self.accurate_steer_angle_seen = True
 
-    if self.accurate_steer_angle_seen:
-      # Offset seems to be invalid for large steering angles
-      if abs(ret.steeringAngleDeg) < 90 and cp.can_valid:
-        self.angle_offset.update(torque_sensor_angle_deg - ret.steeringAngleDeg)
+    if self.cruise_active and not self.cruise_active_previous:
+      self.needs_angle_offset_zss = True # cruise was just activated, so allow offset to be recomputed
+      self.out_of_tolerance_counter = 0 # Allow ZSS re-use after disengage and re-engage
+    self.cruise_active_previous = self.cruise_active
 
-      if self.angle_offset.initialized:
-        ret.steeringAngleOffsetDeg = self.angle_offset.x
-        ret.steeringAngleDeg = torque_sensor_angle_deg - self.angle_offset.x
+    # compute offset for torque steer
+    if self.accurate_steer_angle_seen:
+      if self.needs_angle_offset_torque:
+        angle_wheel = cp.vl["STEER_ANGLE_SENSOR"]["STEER_ANGLE"] + cp.vl["STEER_ANGLE_SENSOR"]["STEER_FRACTION"]
+        if (abs(angle_wheel) > 1e-3 and abs(cp.vl["STEER_TORQUE_SENSOR"]["STEER_ANGLE"]) > 1e-3):
+          self.needs_angle_offset_torque = False
+          self.angle_offset_torque = cp.vl["STEER_TORQUE_SENSOR"]["STEER_ANGLE"] - angle_wheel
+      self.torque_steer_value = cp.vl["STEER_TORQUE_SENSOR"]["STEER_ANGLE"] - self.angle_offset_torque
+
+    if self.CP.hasZss:
+      # compute offset for zorro steer
+      if self.needs_angle_offset_zss:
+        angle_wheel = cp.vl["STEER_ANGLE_SENSOR"]["STEER_ANGLE"] + cp.vl["STEER_ANGLE_SENSOR"]["STEER_FRACTION"]
+        if (abs(angle_wheel) > 1e-3 and abs(cp.vl["SECONDARY_STEER_ANGLE"]["ZORRO_STEER"]) > 1e-3):
+          self.needs_angle_offset_zss = False
+          self.angle_offset_zss = cp.vl["SECONDARY_STEER_ANGLE"]["ZORRO_STEER"] - angle_wheel
+      self.zorro_steer_value = cp.vl["SECONDARY_STEER_ANGLE"]["ZORRO_STEER"] - self.angle_offset_zss
+
+      # default to stock if 1) too many instances of steering being out of tolerance; something is not right
+      #                     2) zorro steer offset has not been computed
+      if self.out_of_tolerance_counter < 10 and not self.needs_angle_offset_zss:
+        # check if zorro steer is out of tolerance
+        if abs(self.stock_steer_value - self.zorro_steer_value) > 4.0:
+          ret.steeringAngleDeg = self.stock_steer_value
+          self.steertype = 1
+          if self.cruise_active:
+            self.out_of_tolerance_counter = self.out_of_tolerance_counter + 1 #should not get here too often with cruise active
+        else:
+          ret.steeringAngleDeg= self.zorro_steer_value
+          self.steertype = 3
+      else:
+        ret.steeringAngleDeg = self.stock_steer_value
+        self.steertype = 1
+    elif self.accurate_steer_angle_seen:
+      ret.steeringAngleDeg = self.torque_steer_value
+      self.steertype = 2
+    else:
+      ret.steeringAngleDeg = self.stock_steer_value
+      self.steertype = 1
 
     ret.steeringRateDeg = cp.vl["STEER_ANGLE_SENSOR"]["STEER_RATE"]
 
@@ -80,6 +129,11 @@ class CarState(CarStateBase):
 
     ret.steeringTorque = cp.vl["STEER_TORQUE_SENSOR"]["STEER_TORQUE_DRIVER"]
     ret.steeringTorqueEps = cp.vl["STEER_TORQUE_SENSOR"]["STEER_TORQUE_EPS"] * self.eps_torque_scale
+    ret.parkingLightON = cp.vl["LIGHT_STALK"]['PARKING_LIGHT'] == 1
+    ret.headlightON = cp.vl["LIGHT_STALK"]['LOW_BEAM'] == 1
+    ret.engineRPM = cp.vl["ENGINE_RPM"]['RPM']
+    ret.meterDimmed = cp.vl["BODY_CONTROL_STATE"]['METER_DIMMED'] == 1
+    ret.meterLowBrightness = cp.vl["BODY_CONTROL_STATE_2"]["METER_SLIDER_LOW_BRIGHTNESS"] == 1
     # we could use the override bit from dbc, but it's triggered at too high torque values
     ret.steeringPressed = abs(ret.steeringTorque) > STEER_THRESHOLD
     ret.steerWarning = cp.vl["EPS_STATUS"]["LKA_STATE"] not in (1, 5)
@@ -109,8 +163,9 @@ class CarState(CarStateBase):
       ret.cruiseState.standstill = False
     else:
       ret.cruiseState.standstill = self.pcm_acc_status == 7
-    ret.cruiseState.enabled = bool(cp.vl["PCM_CRUISE"]["CRUISE_ACTIVE"])
-    ret.cruiseState.nonAdaptive = cp.vl["PCM_CRUISE"]["CRUISE_STATE"] in (1, 2, 3, 4, 5, 6)
+    ret.cruiseState.enabled = self.cruise_active
+    ret.cruiseState.nonAdaptive = cp.vl["PCM_CRUISE"]["CRUISE_STATE"] in [1, 2, 3, 4, 5, 6]
+    ret.pcmStandstill = self.pcm_acc_status == 7
 
     ret.genericToggle = bool(cp.vl["LIGHT_STALK"]["AUTO_HIGH_BEAM"])
     ret.stockAeb = bool(cp_cam.vl["PRE_COLLISION"]["PRECOLLISION_ACTIVE"] and cp_cam.vl["PRE_COLLISION"]["FORCE"] < -1e-5)
@@ -122,6 +177,8 @@ class CarState(CarStateBase):
     if self.CP.enableBsm:
       ret.leftBlindspot = (cp.vl["BSM"]["L_ADJACENT"] == 1) or (cp.vl["BSM"]["L_APPROACHING"] == 1)
       ret.rightBlindspot = (cp.vl["BSM"]["R_ADJACENT"] == 1) or (cp.vl["BSM"]["R_APPROACHING"] == 1)
+
+    self.count = self.count + 1
 
     return ret
 
@@ -154,6 +211,13 @@ class CarState(CarStateBase):
       ("TURN_SIGNALS", "BLINKERS_STATE"),
       ("LKA_STATE", "EPS_STATUS"),
       ("AUTO_HIGH_BEAM", "LIGHT_STALK"),
+      # cydia2020's stuff
+      ("RPM", "ENGINE_RPM", 0),
+      ("METER_DIMMED", "BODY_CONTROL_STATE", 1),
+      ("METER_SLIDER_LOW_BRIGHTNESS", "BODY_CONTROL_STATE_2", 0),
+      ("BRAKE_LIGHTS_ACC", "ESP_CONTROL", 0),
+      ("PARKING_LIGHT", "LIGHT_STALK", 0),
+      ("LOW_BEAM", "LIGHT_STALK", 0),
     ]
 
     checks = [
@@ -161,6 +225,7 @@ class CarState(CarStateBase):
       ("LIGHT_STALK", 1),
       ("BLINKERS_STATE", 0.15),
       ("BODY_CONTROL_STATE", 3),
+      ("BODY_CONTROL_STATE_2", 3),
       ("ESP_CONTROL", 3),
       ("EPS_STATUS", 25),
       ("BRAKE_MODULE", 40),
@@ -168,6 +233,7 @@ class CarState(CarStateBase):
       ("STEER_ANGLE_SENSOR", 80),
       ("PCM_CRUISE", 33),
       ("STEER_TORQUE_SENSOR", 50),
+      ("ENGINE_RPM", 100),
     ]
 
     if CP.flags & ToyotaFlags.HYBRID:
@@ -186,6 +252,14 @@ class CarState(CarStateBase):
       signals.append(("SET_SPEED", "PCM_CRUISE_2"))
       signals.append(("LOW_SPEED_LOCKOUT", "PCM_CRUISE_2"))
       checks.append(("PCM_CRUISE_2", 33))
+
+    # ZSS
+    if CP.carFingerprint == CAR.PRIUS:
+      signals += [("STATE", "AUTOPARK_STATUS", 0)]
+      checks += [("AUTOPARK_STATUS", 0)]
+    if CP.hasZss:
+      signals += [("ZORRO_STEER", "SECONDARY_STEER_ANGLE", 0)]
+      checks += [("SECONDARY_STEER_ANGLE", 0)]
 
     # add gas interceptor reading if we are using it
     if CP.enableGasInterceptor:

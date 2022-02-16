@@ -1,4 +1,5 @@
 from cereal import car
+from common.realtime import DT_CTRL
 from common.numpy_fast import clip, interp
 from selfdrive.car import apply_toyota_steer_torque_limits, create_gas_interceptor_command, make_can_msg
 from selfdrive.car.toyota.toyotacan import create_steer_command, create_ui_command, \
@@ -17,6 +18,9 @@ class CarController():
     self.last_standstill = False
     self.standstill_req = False
     self.steer_rate_limited = False
+    self.permit_braking = True
+    self.last_gas_press_frame = 0
+    self.last_standstill_frame = 0
 
     self.packer = CANPacker(dbc_name)
     self.gas = 0
@@ -29,7 +33,7 @@ class CarController():
     if CS.CP.enableGasInterceptor and active:
       MAX_INTERCEPTOR_GAS = 0.5
       # RAV4 has very sensitive gas pedal
-      if CS.CP.carFingerprint in (CAR.RAV4, CAR.RAV4H, CAR.HIGHLANDER, CAR.HIGHLANDERH):
+      if CS.CP.carFingerprint in [CAR.RAV4]:
         PEDAL_SCALE = interp(CS.out.vEgo, [0.0, MIN_ACC_SPEED, MIN_ACC_SPEED + PEDAL_TRANSITION], [0.15, 0.3, 0.0])
       elif CS.CP.carFingerprint in (CAR.COROLLA,):
         PEDAL_SCALE = interp(CS.out.vEgo, [0.0, MIN_ACC_SPEED, MIN_ACC_SPEED + PEDAL_TRANSITION], [0.3, 0.4, 0.0])
@@ -38,10 +42,20 @@ class CarController():
       # offset for creep and windbrake
       pedal_offset = interp(CS.out.vEgo, [0.0, 2.3, MIN_ACC_SPEED + PEDAL_TRANSITION], [-.4, 0.0, 0.2])
       pedal_command = PEDAL_SCALE * (actuators.accel + pedal_offset)
-      interceptor_gas_cmd = clip(pedal_command, 0., MAX_INTERCEPTOR_GAS)
+      # Prius, Kluger and most LSS Lexus have full speed ACC, but do not automatically resume
+      # Send pedal briefly if in standstill if openpilot wants to accelerate to resume ACC
+      # Pedal command is only sent very briefly, so no need to differentiate between Kluger and other cars
+      if CS.CP.carFingerprint in [CAR.PRIUS, CAR.HIGHLANDER, CAR.HIGHLANDERH, CAR.LEXUS_CTH, CAR.LEXUS_ESH, CAR.LEXUS_NX, CAR.LEXUS_NXH, CAR.LEXUS_RX, CAR.LEXUS_RXH]:
+        if (actuators.accel > 0.0) and CS.pcm_acc_status == 7:
+          interceptor_gas_cmd = 0.16
+        else:
+          interceptor_gas_cmd = 0
+      else:
+        interceptor_gas_cmd = clip(pedal_command, 0., MAX_INTERCEPTOR_GAS)
     else:
       interceptor_gas_cmd = 0.
-    pcm_accel_cmd = clip(actuators.accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX)
+    capped_accel = interp(CS.out.vEgo, [0, 25/3, 50/3], [CarControllerParams.ACCEL_MAX, 1.5, 0.5])
+    pcm_accel_cmd = clip(actuators.accel, CarControllerParams.ACCEL_MIN, capped_accel)
 
     # steer torque
     new_steer = int(round(actuators.steer * CarControllerParams.STEER_MAX))
@@ -72,6 +86,12 @@ class CarController():
 
     can_sends = []
 
+    # ui mesg is at 100Hz but we send asap if:
+    # - there is something to display
+    # - there is something to stop displaying
+    fcw_alert = hud_alert == VisualAlert.fcw
+    steer_alert = hud_alert in [VisualAlert.steerRequired, VisualAlert.ldw]
+
     #*** control msgs ***
     #print("steer {0} {1} {2} {3}".format(apply_steer, min_lim, max_lim, CS.steer_torque_motor)
 
@@ -91,26 +111,33 @@ class CarController():
     if (frame % 3 == 0 and CS.CP.openpilotLongitudinalControl) or pcm_cancel_cmd:
       lead = lead or CS.out.vEgo < 12.    # at low speed we always assume the lead is present so ACC can be engaged
 
+      # handle permit braking logic
+      # record accelerator depression frame
+      if CS.out.gasPressed:
+        self.last_gas_press_frame = frame
+      # record standstill exit frame
+      if CS.pcm_acc_status == 7:
+        self.last_standstill_frame = frame
+      # set permit braking to false briefly after accelerator release
+      if (CS.out.gasPressed or 1.0 / DT_CTRL > (frame - self.last_gas_press_frame)) or (2.0 / DT_CTRL > (frame - self.last_standstill_frame)):
+        self.permit_braking = False
+      else:
+        self.permit_braking = True
+
       # Lexus IS uses a different cancellation message
       if pcm_cancel_cmd and CS.CP.carFingerprint in (CAR.LEXUS_IS, CAR.LEXUS_RC):
         can_sends.append(create_acc_cancel_command(self.packer))
       elif CS.CP.openpilotLongitudinalControl:
-        can_sends.append(create_accel_command(self.packer, pcm_accel_cmd, pcm_cancel_cmd, self.standstill_req, lead, CS.acc_type))
+        can_sends.append(create_accel_command(self.packer, pcm_accel_cmd, pcm_cancel_cmd, self.standstill_req, lead, CS.acc_type, fcw_alert, self.permit_braking))
         self.accel = pcm_accel_cmd
       else:
-        can_sends.append(create_accel_command(self.packer, 0, pcm_cancel_cmd, False, lead, CS.acc_type))
+        can_sends.append(create_accel_command(self.packer, 0, pcm_cancel_cmd, False, lead, CS.acc_type, False, True))
 
     if frame % 2 == 0 and CS.CP.enableGasInterceptor and CS.CP.openpilotLongitudinalControl:
       # send exactly zero if gas cmd is zero. Interceptor will send the max between read value and gas cmd.
       # This prevents unexpected pedal range rescaling
       can_sends.append(create_gas_interceptor_command(self.packer, interceptor_gas_cmd, frame // 2))
       self.gas = interceptor_gas_cmd
-
-    # ui mesg is at 1Hz but we send asap if:
-    # - there is something to display
-    # - there is something to stop displaying
-    fcw_alert = hud_alert == VisualAlert.fcw
-    steer_alert = hud_alert in (VisualAlert.steerRequired, VisualAlert.ldw)
 
     send_ui = False
     if ((fcw_alert or steer_alert) and not self.alert_active) or \
