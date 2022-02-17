@@ -54,8 +54,7 @@ class CarController():
         interceptor_gas_cmd = clip(pedal_command, 0., MAX_INTERCEPTOR_GAS)
     else:
       interceptor_gas_cmd = 0.
-    capped_accel = interp(CS.out.vEgo, [0, 25/3, 50/3], [CarControllerParams.ACCEL_MAX, 1.5, 0.5])
-    pcm_accel_cmd = clip(actuators.accel, CarControllerParams.ACCEL_MIN, capped_accel)
+    pcm_accel_cmd = clip(actuators.accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX)
 
     # steer torque
     new_steer = int(round(actuators.steer * CarControllerParams.STEER_MAX))
