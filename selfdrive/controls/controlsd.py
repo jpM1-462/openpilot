@@ -653,6 +653,7 @@ class Controls:
     hudControl.speedVisible = self.enabled
     hudControl.lanesVisible = self.enabled
     hudControl.leadVisible = self.sm['longitudinalPlan'].hasLead
+    hudControl.leadVelocity = sm['radarState'].leadOne.vLeadK if hudControl.leadVisible else 0.0
 
     hudControl.rightLaneVisible = True
     hudControl.leftLaneVisible = True
