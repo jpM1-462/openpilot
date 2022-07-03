@@ -207,4 +207,13 @@ routes = [
 
   TestRoute("6c14ee12b74823ce|2021-06-30--11-49-02", TESLA.AP1_MODELS),
   TestRoute("bb50caf5f0945ab1|2021-06-19--17-20-18", TESLA.AP2_MODELS),
+
+  # Segments that test specific issues
+  # Controls mismatch due to interceptor threshold
+  TestRoute("cfb32f0fb91b173b|2022-04-06--14-54-45", HONDA.CIVIC, segment=21),
+  TestRoute("5a8762b91fc70467|2022-04-14--21-26-20", TOYOTA.RAV4, segment=2),
+  # Controls mismatch due to standstill threshold
+  TestRoute("bec2dcfde6a64235|2022-04-08--14-21-32", HONDA.CRV_HYBRID, segment=22),
+
+  TestRoute("2f37c007683e85ba|2022-05-31--20-30-11", TOYOTA.CAMRY),
 ]
