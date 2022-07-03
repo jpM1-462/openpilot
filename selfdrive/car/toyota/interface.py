@@ -4,7 +4,7 @@ from common.params import Params
 from common.conversions import Conversions as CV
 from selfdrive.car.toyota.tunes import LatTunes, LongTunes, set_long_tune, set_lat_tune
 from selfdrive.controls.lib.latcontrol_torque import set_torque_tune
-from selfdrive.car.toyota.values import Ecu, CAR, ToyotaFlags, TSS2_CAR, NO_DSU_CAR, MIN_ACC_SPEED, EPS_SCALE, EV_HYBRID_CAR, FULL_SPEED_DRCC_CAR, CarControllerParams
+from selfdrive.car.toyota.values import Ecu, CAR, ToyotaFlags, TSS2_CAR, NO_DSU_CAR, MIN_ACC_SPEED, EPS_SCALE, EV_HYBRID_CAR, RADAR_ACC_CAR_TSS1 ,FULL_SPEED_DRCC_CAR, CarControllerParams
 from selfdrive.car import STD_CARGO_KG, scale_rot_inertia, scale_tire_stiffness, gen_empty_fingerprint, get_safety_config
 from selfdrive.car.interfaces import CarInterfaceBase
 
@@ -215,14 +215,14 @@ class CarInterface(CarInterfaceBase):
     ret.smartDsu = 0x2FF in fingerprint[0]
     if ret.smartDsu:
       params.put_bool("ToyotaLongToggle_Allow", True)
-    smartDsu_radar_dsu = 0x2AA in fingerprint[0]
+    smartDsu_radar_acc_tss1 = 0x2AA in fingerprint[0]
     # In TSS2 cars the camera does long control
     found_ecus = [fw.ecu for fw in car_fw]
-    ret.enableDsu = (len(found_ecus) > 0) and (Ecu.dsu not in found_ecus) and (candidate not in NO_DSU_CAR) and (not ret.smartDsu)
+    ret.enableDsu = (len(found_ecus) > 0) and (Ecu.dsu not in found_ecus) and (candidate not in NO_DSU_CAR) and (not ret.smartDsu) and (not smartDsu_radar_acc_tss1)
     ret.enableGasInterceptor = 0x201 in fingerprint[0]
     # if the smartDSU is detected, openpilot can send ACC_CMD (and the smartDSU will block it from the DSU) or not (the DSU is "connected")
     ret.openpilotLongitudinalControl = (ret.smartDsu or ret.enableDsu or candidate in TSS2_CAR) and not params.get_bool("SmartDSULongToggle")
-    if smartDsu_radar_dsu:
+    if smartDsu_radar_acc_tss1:
       ret.radarTimeStep = 1.0 / 15.0
 
     # we can't use the fingerprint to detect this reliably, since
