@@ -6,7 +6,7 @@ from common.realtime import DT_CTRL
 from opendbc.can.can_define import CANDefine
 from opendbc.can.parser import CANParser
 from selfdrive.car.interfaces import CarStateBase
-from selfdrive.car.toyota.values import ToyotaFlags, CAR, DBC, STEER_THRESHOLD, NO_STOP_TIMER_CAR, TSS2_CAR, RADAR_ACC_CAR, EPS_SCALE
+from selfdrive.car.toyota.values import ToyotaFlags, CAR, DBC, STEER_THRESHOLD, NO_STOP_TIMER_CAR, TSS2_CAR, RADAR_ACC_CAR, EPS_SCALE, RADAR_ACC_CAR_TSS1
 
 
 class CarState(CarStateBase):
@@ -90,16 +90,24 @@ class CarState(CarStateBase):
     if self.CP.carFingerprint in (CAR.LEXUS_IS, CAR.LEXUS_RC):
       ret.cruiseState.available = cp.vl["DSU_CRUISE"]["MAIN_ON"] != 0
       ret.cruiseState.speed = cp.vl["DSU_CRUISE"]["SET_SPEED"] * CV.KPH_TO_MS
+      ret.pcmFollowDistance = 2
     else:
       ret.cruiseState.available = cp.vl["PCM_CRUISE_2"]["MAIN_ON"] != 0
       ret.cruiseState.speed = cp.vl["PCM_CRUISE_2"]["SET_SPEED"] * CV.KPH_TO_MS
+      ret.pcmFollowDistance = cp.vl["PCM_CRUISE_2"]["PCM_FOLLOW_DISTANCE"]
 
     if self.CP.carFingerprint in RADAR_ACC_CAR:
       self.acc_type = cp.vl["ACC_CONTROL"]["ACC_TYPE"]
       ret.stockFcw = bool(cp.vl["ACC_HUD"]["FCW"])
+      self.distance_btn = 0
     elif self.CP.carFingerprint in TSS2_CAR:
       self.acc_type = cp_cam.vl["ACC_CONTROL"]["ACC_TYPE"]
+      self.distance_btn = 1 if cp_cam.vl["ACC_CONTROL"]["DISTANCE"] == 1 else 0
       ret.stockFcw = bool(cp_cam.vl["ACC_HUD"]["FCW"])
+    elif self.CP.carFingerprint in RADAR_ACC_CAR_TSS1:
+      self.distance_btn = 1 if cp.vl["ACC_CONTROL_COPY"]["DISTANCE"] == 1 else 0
+    else:
+      self.distance_btn = 0
 
     # some TSS2 cars have low speed lockout permanently set, so ignore on those cars
     # these cars are identified by an ACC_TYPE value of 2.
@@ -192,6 +200,7 @@ class CarState(CarStateBase):
       signals.append(("MAIN_ON", "PCM_CRUISE_2"))
       signals.append(("SET_SPEED", "PCM_CRUISE_2"))
       signals.append(("LOW_SPEED_LOCKOUT", "PCM_CRUISE_2"))
+      signals.append(("PCM_FOLLOW_DISTANCE", "PCM_CRUISE_2"))
       checks.append(("PCM_CRUISE_2", 33))
 
     # add gas interceptor reading if we are using it
@@ -199,6 +208,11 @@ class CarState(CarStateBase):
       signals.append(("INTERCEPTOR_GAS", "GAS_SENSOR"))
       signals.append(("INTERCEPTOR_GAS2", "GAS_SENSOR"))
       checks.append(("GAS_SENSOR", 50))
+
+    # checks for radar acc car
+    if CP.carFingerprint in RADAR_ACC_CAR_TSS1:
+      signals.append(("DISTANCE", "ACC_CONTROL_COPY"))
+      checks.append(("ACC_CONTROL_COPY", 33))
 
     if CP.enableBsm:
       signals += [
@@ -237,6 +251,7 @@ class CarState(CarStateBase):
     if CP.carFingerprint in (TSS2_CAR - RADAR_ACC_CAR):
       signals += [
         ("ACC_TYPE", "ACC_CONTROL"),
+        ("DISTANCE", "ACC_CONTROL"),
         ("FCW", "ACC_HUD"),
       ]
       checks += [
