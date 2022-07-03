@@ -176,6 +176,7 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"Offroad_UnofficialHardware", CLEAR_ON_MANAGER_START},
     {"Offroad_UpdateFailed", CLEAR_ON_MANAGER_START},
     {"ToyotaRadarACCTSS1_ObjectMode", PERSISTENT},
+    {"AllowInterceptor", PERSISTENT},
 };
 
 } // namespace

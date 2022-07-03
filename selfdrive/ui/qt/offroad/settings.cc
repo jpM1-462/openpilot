@@ -69,6 +69,12 @@ TogglesPanel::TogglesPanel(SettingsWindow *parent) : ListWidget(parent) {
       "When enabled, pressing the accelerator pedal will disengage openpilot.",
       "../assets/offroad/icon_disengage_on_accelerator.svg",
     },
+    {
+      "AllowInterceptor",
+      "Enable Comma Pedal",
+      "When enabled, connected comma pedal will be utilised.",
+      "../assets/offroad/icon_disengage_on_accelerator.svg",
+    },
 #ifdef ENABLE_MAPS
     {
       "NavSettingTime24h",
