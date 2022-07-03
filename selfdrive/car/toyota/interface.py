@@ -215,16 +215,14 @@ class CarInterface(CarInterfaceBase):
     ret.smartDsu = 0x2FF in fingerprint[0]
     if ret.smartDsu:
       params.put_bool("ToyotaLongToggle_Allow", True)
-    smartDsu_nodsu = 0x2AA in fingerprint[0]
-    print(f"NODSU: {smartDsu_nodsu}")
-    print(f"fingerprint: {fingerprint[0]}")
+    smartDsu_radar_dsu = 0x2AA in fingerprint[0]
     # In TSS2 cars the camera does long control
     found_ecus = [fw.ecu for fw in car_fw]
     ret.enableDsu = (len(found_ecus) > 0) and (Ecu.dsu not in found_ecus) and (candidate not in NO_DSU_CAR) and (not ret.smartDsu)
     ret.enableGasInterceptor = 0x201 in fingerprint[0]
     # if the smartDSU is detected, openpilot can send ACC_CMD (and the smartDSU will block it from the DSU) or not (the DSU is "connected")
     ret.openpilotLongitudinalControl = (ret.smartDsu or ret.enableDsu or candidate in TSS2_CAR) and not params.get_bool("SmartDSULongToggle")
-    if smartDsu_nodsu:
+    if smartDsu_radar_dsu:
       ret.radarTimeStep = 1.0 / 15.0
 
     # we can't use the fingerprint to detect this reliably, since
