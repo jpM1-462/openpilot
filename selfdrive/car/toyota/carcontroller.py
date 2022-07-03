@@ -92,7 +92,12 @@ class CarController:
     if CS.out.standstill and not self.last_standstill and self.CP.carFingerprint not in NO_STOP_TIMER_CAR:
     # release_standstill always 0 on radar_acc_tss1 cars
     if self.radar_acc_tss1:
-      self.standstill_req = True
+      #self.standstill_req = True
+      # test tss2 standstill
+      if CS.pcm_acc_status != 8:
+        # pcm entered standstill or it's disabled
+        self.standstill_req = False
+
       # TODO: verify this
       # Gear state * auto hold state * acc state * lead state
       #if CS.out.standstill:

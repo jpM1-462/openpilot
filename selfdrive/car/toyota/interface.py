@@ -211,7 +211,7 @@ class CarInterface(CarInterfaceBase):
     ret.tireStiffnessFront, ret.tireStiffnessRear = scale_tire_stiffness(ret.mass, ret.wheelbase, ret.centerToFront,
                                                                          tire_stiffness_factor=tire_stiffness_factor)
 
-    ret.enableBsm = 0x3F6 in fingerprint[0] and candidate in TSS2_CAR
+    ret.enableBsm = 0x3F6 in fingerprint[0] and (candidate in TSS2_CAR or candidate in RADAR_ACC_CAR_TSS1)
     # Detect smartDSU, which intercepts ACC_CMD from the DSU allowing openpilot to send it
     ret.smartDsu = 0x2FF in fingerprint[0]
     if ret.smartDsu:
