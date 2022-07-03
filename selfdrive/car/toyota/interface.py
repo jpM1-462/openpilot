@@ -215,7 +215,9 @@ class CarInterface(CarInterfaceBase):
     ret.smartDsu = 0x2FF in fingerprint[0]
     if ret.smartDsu:
       params.put_bool("ToyotaLongToggle_Allow", True)
-    smartDsu_nodsu = 0x2A8 in fingerprint[0]
+    smartDsu_nodsu = 0x2AA in fingerprint[0]
+    print(f"NODSU: {smartDsu_nodsu}")
+    print(f"fingerprint: {fingerprint[0]}")
     # In TSS2 cars the camera does long control
     found_ecus = [fw.ecu for fw in car_fw]
     ret.enableDsu = (len(found_ecus) > 0) and (Ecu.dsu not in found_ecus) and (candidate not in NO_DSU_CAR) and (not ret.smartDsu)

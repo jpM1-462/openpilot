@@ -5,6 +5,9 @@ from selfdrive.car.toyota.values import NO_DSU_CAR, DBC, TSS2_CAR
 from selfdrive.car.interfaces import RadarInterfaceBase
 
 def _create_nodsu_radar_can_parser(car_fingerprint):
+  if DBC[car_fingerprint]['radar'] is None:
+    return None
+
   # object 0 to 11
   RADAR_MSGS = list(range(0x301, 0x318, 2))
   msg_n = len(RADAR_MSGS)
@@ -14,15 +17,10 @@ def _create_nodsu_radar_can_parser(car_fingerprint):
         ['LAT_DIST'] * msg_n + \
         ['SPEED'] * msg_n + \
         ['LAT_SPEED'] * msg_n,
-        RADAR_MSGS * 5,
-        [0] * msg_n + \
-        [0] * msg_n + \
-        [0] * msg_n + \
-        [0] * msg_n + \
-        [0] * msg_n))
+        RADAR_MSGS * 5))
 
   checks = list(zip(RADAR_MSGS, [15] * msg_n))
-  return CANParser(DBC[carFingerprint]['radar'], signals, checks, 1)
+  return CANParser(DBC[car_fingerprint]['radar'], signals, checks, 1)
 
 def _create_radar_can_parser(car_fingerprint):
   if car_fingerprint in TSS2_CAR:
@@ -48,9 +46,8 @@ class RadarInterface(RadarInterfaceBase):
     super().__init__(CP)
     self.track_id = 0
     self.radar_ts = CP.radarTimeStep
-    self.nodsu_long = CP.carFingerprint in NO_DSU_CAR and CP.openpilotLongitudinalControl
 
-    if self.nodsu_long:
+    if CP.carFingerprint in NO_DSU_CAR and CP.carFingerprint not in TSS2_CAR:
       self.RADAR_MSGS = list(range(0x301, 0x318, 2))
       self.valid_cnt = {key: 0 for key in range(0x3f)}
       self.rcp = _create_nodsu_radar_can_parser(CP.carFingerprint)
@@ -70,7 +67,7 @@ class RadarInterface(RadarInterfaceBase):
 
     # No radar dbc for cars without DSU which are not TSS 2.0
     # TODO: make a adas dbc file for dsu-less models
-    self.no_radar = ((not self.nodsu_long) and CP.carFingerprint in NO_DSU_CAR) and CP.carFingerprint not in TSS2_CAR
+    self.no_radar = ((not CP.openpilotLongitudinalControl) and CP.carFingerprint in NO_DSU_CAR) and CP.carFingerprint not in TSS2_CAR
 
   def update(self, can_strings):
     if self.no_radar:
@@ -114,7 +111,7 @@ class RadarInterface(RadarInterfaceBase):
 
           self.pts[track_id].dRel = cpt['LONG_DIST']  # from front of car
           self.pts[track_id].yRel = cpt['LAT_DIST']  # in car frame's y axis, left is positive
-          self.pts[track_id].vRel = cpt['SPEED'] * CV.KPH_TO_MS # it's absolute speed
+          self.pts[track_id].vRel = cpt['SPEED'] # it's absolute speed
           self.pts[track_id].aRel = float('nan')
           self.pts[track_id].yvRel = cpt['LAT_SPEED']
           self.pts[track_id].measured = True
