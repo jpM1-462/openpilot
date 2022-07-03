@@ -7,6 +7,7 @@ from selfdrive.controls.lib.latcontrol_torque import set_torque_tune
 from selfdrive.car.toyota.values import Ecu, CAR, ToyotaFlags, TSS2_CAR, NO_DSU_CAR, MIN_ACC_SPEED, EPS_SCALE, EV_HYBRID_CAR, RADAR_ACC_CAR_TSS1 ,FULL_SPEED_DRCC_CAR, CarControllerParams
 from selfdrive.car import STD_CARGO_KG, scale_rot_inertia, scale_tire_stiffness, gen_empty_fingerprint, get_safety_config
 from selfdrive.car.interfaces import CarInterfaceBase
+from common.params import Params
 
 EventName = car.CarEvent.EventName
 
@@ -218,8 +219,6 @@ class CarInterface(CarInterfaceBase):
     smartDsu_radar_acc_tss1 = 0x2AA in fingerprint[0]
     smartDsu = 0x2FF in fingerprint[0]
     smartDsu_radar_acc_tss1 = candidate in RADAR_ACC_CAR_TSS1 and 0x2AA in fingerprint[0]
-    print(f"RADAR DSU: {smartDsu_radar_acc_tss1}")
-    print(f"fingerprint: {fingerprint[0]}")
     # In TSS2 cars the camera does long control
     found_ecus = [fw.ecu for fw in car_fw]
     ret.enableDsu = (len(found_ecus) > 0) and (Ecu.dsu not in found_ecus) and (candidate not in NO_DSU_CAR) and (not ret.smartDsu) and (not smartDsu_radar_acc_tss1)
@@ -227,7 +226,11 @@ class CarInterface(CarInterfaceBase):
     # if the smartDSU is detected, openpilot can send ACC_CMD (and the smartDSU will block it from the DSU) or not (the DSU is "connected")
     ret.openpilotLongitudinalControl = (ret.smartDsu or ret.enableDsu or candidate in TSS2_CAR) and not params.get_bool("SmartDSULongToggle")
     if smartDsu_radar_acc_tss1:
-      ret.radarTimeStep = 1.0 / 15.0
+      params = Params()
+      if params.getBool("ToyotaRadarACCTSS1_ObjectMode"):
+        ret.radarTimeStep = 1.0 / 15.0
+      else:
+        ret.radarTimeStep = 1.0 / 10.0
 
     # we can't use the fingerprint to detect this reliably, since
     # the EV gas pedal signal can take a couple seconds to appear
