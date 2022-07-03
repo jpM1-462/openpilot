@@ -9,7 +9,7 @@ def _create_radar_acc_tss1_can_parser(car_fingerprint):
   if DBC[car_fingerprint]['radar'] is None:
     return None
 
-  if params.getBool("ToyotaRadarACCTSS1_ObjectMode"):
+  if Params().get_bool("ToyotaRadarACCTSS1_ObjectMode"):
     RADAR_A_MSGS = list(range(0x301, 0x318, 2))
   else:
     RADAR_A_MSGS = list(range(0x680, 0x686))
@@ -49,7 +49,7 @@ class RadarInterface(RadarInterfaceBase):
     self.radar_acc_tss1 = CP.carFingerprint in RADAR_ACC_CAR_TSS1
 
     if self.radar_acc_tss1:
-      if params.getBool("ToyotaRadarACCTSS1_ObjectMode"):
+      if Params().get_bool("ToyotaRadarACCTSS1_ObjectMode"):
         self.RADAR_A_MSGS = self.RADAR_B_MSGS = list(range(0x301, 0x318, 2))
       else:
         self.RADAR_A_MSGS = self.RADAR_B_MSGS = list(range(0x680, 0x686))
@@ -79,13 +79,15 @@ class RadarInterface(RadarInterfaceBase):
     if self.trigger_msg not in self.updated_messages:
       return None
 
-    if self.radar_acc_tss1:
-      rr = self._update_radar_acc_tss1(self.updated_messages)
-    else:
-      rr = self._update(self.updated_messages)
+    rr = self._update(self.updated_messages)
     self.updated_messages.clear()
-
     return rr
+
+  def _update(self, updated_messages):
+    if self.radar_acc_tss1:
+      return self._update_radar_acc_tss1(updated_messages)
+    else:
+      return self._update_tss2(updated_messages)
 
   def _update_radar_acc_tss1(self, updated_messages):
     ret = car.RadarData.new_message()
@@ -124,7 +126,7 @@ class RadarInterface(RadarInterfaceBase):
     ret.points = list(self.pts.values())
     return ret
 
-  def _update(self, updated_messages):
+  def _update_tss2(self, updated_messages):
     ret = car.RadarData.new_message()
     errors = []
     if not self.rcp.can_valid:

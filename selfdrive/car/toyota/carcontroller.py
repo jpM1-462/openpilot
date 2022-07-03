@@ -145,16 +145,18 @@ class CarController:
     # we can spam can to cancel the system even if we are using lat only control
     if (self.frame % 3 == 0 and self.CP.openpilotLongitudinalControl) or pcm_cancel_cmd:
       lead = hud_control.leadVisible or (CS.out.vEgo < 12. and (not CS.out.standstill or CC.enabled))  # at low speed we always assume the lead is present so ACC can be engaged
+      lead_standstill = lead and hud_control.leadVelocity < 0.1
 
+      acc_msg = 'ACC_CONTROL_SAFE' if self.radar_acc_tss1 else 'ACC_CONTROL'
       # Lexus IS uses a different cancellation message
       if pcm_cancel_cmd and self.CP.carFingerprint in (CAR.LEXUS_IS, CAR.LEXUS_RC):
         can_sends.append(create_acc_cancel_command(self.packer))
       elif self.CP.openpilotLongitudinalControl:
-        msg = 'ACC_CONTROL_SAFE' if self.radar_acc_tss1 else 'ACC_CONTROL'
-        can_sends.append(create_accel_command(self.packer, pcm_accel_cmd, pcm_cancel_cmd, self.standstill_req, lead, CS.acc_type, CS.distance_btn, fcw_alert, self.permit_braking, msg))
+        acc_msg = 'ACC_CONTROL_SAFE' if self.radar_acc_tss1 else 'ACC_CONTROL'
+        can_sends.append(create_accel_command(self.packer, pcm_accel_cmd, pcm_cancel_cmd, self.standstill_req, lead, CS.acc_type, CS.distance_btn, fcw_alert, self.permit_braking, lead_standstill, acc_msg))
         self.accel = pcm_accel_cmd
       else:
-        can_sends.append(create_accel_command(self.packer, 0, pcm_cancel_cmd, False, lead, CS.acc_type, CS.distance_btn, False, False))
+        can_sends.append(create_accel_command(self.packer, 0, pcm_cancel_cmd, False, lead, CS.acc_type, CS.distance_btn, False, False, lead_standstill, acc_msg))
 
     if self.frame % 2 == 0 and self.CP.enableGasInterceptor and not CS.out.brakePressed:
       # send exactly zero if gas cmd is zero. Interceptor will send the max between read value and gas cmd.
