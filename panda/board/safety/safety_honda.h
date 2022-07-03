@@ -17,7 +17,7 @@ const int HONDA_GAS_INTERCEPTOR_THRESHOLD = 492;
 #define HONDA_GET_INTERCEPTOR(msg) (((GET_BYTE((msg), 0) << 8) + GET_BYTE((msg), 1) + (GET_BYTE((msg), 2) << 8) + GET_BYTE((msg), 3)) / 2U)  // avg between 2 tracks
 const int HONDA_BOSCH_NO_GAS_VALUE = -30000; // value sent when not requesting gas
 const int HONDA_BOSCH_GAS_MAX = 2000;
-const int HONDA_BOSCH_ACCEL_MIN = -350; // max braking == -3.5m/s2
+const int HONDA_BOSCH_ACCEL_MIN = -400; // max braking == -3.5m/s2
 
 // Nidec has the powertrain bus on bus 0
 AddrCheckStruct honda_nidec_addr_checks[] = {

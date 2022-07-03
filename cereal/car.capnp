@@ -204,6 +204,14 @@ struct CarState {
   leftBlindspot @33 :Bool; # Is there something blocking the left lane change
   rightBlindspot @34 :Bool; # Is there something blocking the right lane change
 
+  pcmFollowDistance @41 :UInt8; # Toyota PCM Follow Distance
+  parkingLightON @42 :Bool; # Parking Light ON
+  pcmStandstill @43 :Bool; # PCM State is 7
+  meterLowBrightness @44 :Bool; # MFD Low Brightness Mode ON
+  headlightON @45 :Bool; # Low Beam ON
+  usingZss @46 :Bool; # Is CS using ZSS
+  meterDimmed @47 :Bool; # MFD Dimmer ON
+
   struct WheelSpeeds {
     # optional wheel speeds
     fl @0 :Float32;
@@ -256,7 +264,7 @@ struct CarState {
   }
 
   errorsDEPRECATED @0 :List(CarEvent.EventName);
-  brakeLightsDEPRECATED @19 :Bool;
+  brakeLights @19 :Bool;
 }
 
 # ******* radar state @ 20hz *******
@@ -408,6 +416,8 @@ struct CarParams {
   enableApgs @6 :Bool;       # advanced parking guidance system
   enableBsm @56 :Bool;       # blind spot monitoring
   flags @64 :UInt32;         # flags for car specific quirks
+  hasZss @68 :Bool;          # true if ZSS is detected
+  smartDsu @69: Bool;        # true if SDSU is detected
 
   minEnableSpeed @7 :Float32;
   minSteerSpeed @8 :Float32;
@@ -495,6 +505,7 @@ struct CarParams {
     ki @2 :Float32;
     friction @3 :Float32;
     kf @4 :Float32;
+    steeringAngleDeadzoneDeg @5 :Float32;
   }
 
   struct LongitudinalPIDTuning {

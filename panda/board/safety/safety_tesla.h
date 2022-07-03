@@ -8,7 +8,7 @@ const struct lookup_t TESLA_LOOKUP_ANGLE_RATE_DOWN = {
 
 const int TESLA_DEG_TO_CAN = 10;
 const float TESLA_MAX_ACCEL = 2.0;  // m/s^2
-const float TESLA_MIN_ACCEL = -3.5; // m/s^2
+const float TESLA_MIN_ACCEL = -4.0; // m/s^2
 
 const int TESLA_FLAG_POWERTRAIN = 1;
 const int TESLA_FLAG_LONGITUDINAL_CONTROL = 2;
