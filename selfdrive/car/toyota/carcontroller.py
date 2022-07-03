@@ -87,9 +87,6 @@ class CarController:
       apply_steer_req = 0
       self.steer_rate_counter = 0
 
-    # This logic is broken, TODO: FIXME
-    # on entering standstill, send standstill request
-    if CS.out.standstill and not self.last_standstill and self.CP.carFingerprint not in NO_STOP_TIMER_CAR:
     # release_standstill always 0 on radar_acc_tss1 cars
     if self.radar_acc_tss1:
       #self.standstill_req = True
