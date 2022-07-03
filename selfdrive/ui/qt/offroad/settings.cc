@@ -53,6 +53,12 @@ TogglesPanel::TogglesPanel(SettingsWindow *parent) : ListWidget(parent) {
       "Upload data from the driver facing camera and help improve the driver monitoring algorithm.",
       "../assets/offroad/icon_monitoring.png",
     },
+    {
+      "AllowInterceptor",
+      "Enable Comma Pedal",
+      "When enabled, connected comma pedal will be utilised.",
+      "../assets/offroad/icon_disengage_on_accelerator.svg",
+    },
 #ifdef ENABLE_MAPS
     {
       "NavSettingTime24h",

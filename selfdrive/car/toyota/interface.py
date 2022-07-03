@@ -221,7 +221,7 @@ class CarInterface(CarInterfaceBase):
     # In TSS2 cars the camera does long control
     found_ecus = [fw.ecu for fw in car_fw]
     ret.enableDsu = (len(found_ecus) > 0) and (Ecu.dsu not in found_ecus) and (candidate not in NO_DSU_CAR) and (not ret.smartDsu) and (not smartDsu_radar_acc_tss1)
-    ret.enableGasInterceptor = 0x201 in fingerprint[0]
+    ret.enableGasInterceptor = 0x201 in fingerprint[0] and Params().get_bool("AllowInterceptor")
     # if the smartDSU is detected, openpilot can send ACC_CMD (and the smartDSU will block it from the DSU) or not (the DSU is "connected")
     ret.openpilotLongitudinalControl = (ret.smartDsu or ret.enableDsu or candidate in TSS2_CAR) and not params.get_bool("SmartDSULongToggle")
     if smartDsu_radar_acc_tss1:
