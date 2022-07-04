@@ -15,7 +15,6 @@ from selfdrive.car.car_helpers import interfaces
 from selfdrive.car.gm.values import CAR as GM
 from selfdrive.car.honda.values import CAR as HONDA, HONDA_BOSCH
 from selfdrive.car.hyundai.values import CAR as HYUNDAI
-from selfdrive.car.toyota.values import CAR as TOYOTA
 from selfdrive.car.tests.routes import non_tested_cars, routes, TestRoute
 from selfdrive.test.openpilotci import get_url
 from tools.lib.logreader import LogReader
@@ -247,10 +246,6 @@ class TestCarModel(unittest.TestCase):
         checks['mainOn'] += CS.cruiseState.available != self.safety.get_acc_main_on()
 
       CS_prev = CS
-
-    # TODO: add flag to toyota safety
-    if self.CP.carFingerprint == TOYOTA.SIENNA and checks['brakePressed'] < 25:
-      checks['brakePressed'] = 0
 
     failed_checks = {k: v for k, v in checks.items() if v > 0}
     self.assertFalse(len(failed_checks), f"panda safety doesn't agree with openpilot: {failed_checks}")
