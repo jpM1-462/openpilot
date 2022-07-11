@@ -39,7 +39,7 @@ def set_long_tune(tune, name):
   elif name == LongTunes.TSS:
     tune.kpBP = [0., 5., 35.]
     tune.kiBP = [0., 35.]
-    tune.kpV = [1.8, 1.5, 1.0]
+    tune.kpV = [2.0, 1.5, 1.0]
     tune.kiV = [0.54, 0.36]
   else:
     raise NotImplementedError('This longitudinal tune does not exist')
