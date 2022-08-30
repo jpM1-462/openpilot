@@ -206,14 +206,8 @@ class Controls:
       self.events.add(EventName.controlsInitializing)
       return
 
-    # Disable on rising edge of accelerator or brake. Also disable on brake when speed > 0
-    if (CS.gasPressed and not self.CS_prev.gasPressed and self.disengage_on_accelerator) or \
-      (CS.brakePressed and not self.CS_prev.brakePressed and CS.standstill):
-      self.events.add(EventName.pedalPressed)
-
     if CS.gasPressed:
-      self.events.add(EventName.pedalPressedPreEnable if self.disengage_on_accelerator else
-                      EventName.gasPressedOverride)
+      self.events.add(EventName.gasPressedOverride)
 
     self.events.add_from_msg(CS.events)
 
