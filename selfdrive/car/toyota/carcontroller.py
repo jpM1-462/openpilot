@@ -87,7 +87,7 @@ class CarController:
       apply_steer_req = 0
       self.steer_rate_counter = 0
 
-    lead_vehicle_stopped = hud_control.leadVelocity < 0.5 and hud_control.leadVisible  # Give radar some room for error
+    lead_vehicle_stopped = hud_control.leadVelocity < 0.2 and hud_control.leadVisible  # Give radar some room for error
 
     # cydia2020 - mimic stock behaviour, send standstill if the lead vehicle is stopped, else release
     if CS.out.standstill and lead_vehicle_stopped and self.CP.carFingerprint not in NO_STOP_TIMER_CAR:
