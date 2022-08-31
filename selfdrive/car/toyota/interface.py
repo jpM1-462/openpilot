@@ -30,7 +30,7 @@ class CarInterface(CarInterfaceBase):
     ret.safetyConfigs = [get_safety_config(car.CarParams.SafetyModel.toyota)]
     ret.safetyConfigs[0].safetyParam = EPS_SCALE[candidate]
 
-    ret.steerActuatorDelay = 0.12  # Default delay, Prius has larger delay
+    ret.steerActuatorDelay = -0.03  # Default delay, Prius has larger delay
     ret.steerLimitTimer = 0.4
     ret.hasZss = 0x23 in fingerprint[0] and params.get_bool("EnableZss") # Detect if ZSS is present
     ret.stoppingControl = False  # Toyota starts braking more when it thinks you want to stop
