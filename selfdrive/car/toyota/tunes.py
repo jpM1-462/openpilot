@@ -36,8 +36,8 @@ def set_long_tune(tune, name):
     tune.deadzoneV = [.0, .14]
     tune.kpBP = [0., 2.8, 17., 25., 36.]
     tune.kpV = [2.0, 1.0, 0.02, 0.005, 0.002]
-    tune.kiBP = [0., 35.]
-    tune.kiV = [0.08, 0.002]
+    tune.kiBP = [0., 13., 17., 36.]
+    tune.kiV = [0.08, 0.15, 0.3, 0.35]
   # Default longitudinal tune
   elif name == LongTunes.TSS:
     tune.kpBP = [0., 5., 35.]
