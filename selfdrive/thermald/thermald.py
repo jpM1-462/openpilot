@@ -277,6 +277,7 @@ def thermald_thread(end_event, hw_queue):
     # **** starting logic ****
 
     # Ensure date/time are valid
+    now = datetime.datetime.utcnow()
     startup_conditions["time_valid"] = (now.year > 1020) or (now.year == 1020 and now.month >= 10)
     set_offroad_alert_if_changed("Offroad_InvalidTime", (not startup_conditions["time_valid"]))
 
